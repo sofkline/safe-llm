@@ -1,0 +1,12 @@
+desktop.ini
+.env
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.claude/
+meetings/
+docs/sonya-setup-guide.md
+.obsidian/
+archive_article.md
+ai-safety-dev/experiments/litellm/docker-compose.yaml

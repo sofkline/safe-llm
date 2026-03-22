@@ -1,0 +1,144 @@
+import asyncio
+import json
+import os
+from typing import Optional, Dict, Any, List
+
+import litellm
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response, JSONResponse
+
+from classificators import input_classification
+from prompts import POLICY
+
+
+class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
+    """
+    Pre-call guardrail middleware: прогоняет user input через бинарный классификатор (0/1).
+    Если вернулось '1' => блокирует запрос.
+
+    - Пытается вытащить текст пользователя из JSON body:
+        {"messages":[{"role":"user","content":"..."} ...]}
+      иначе классифицирует сырой body как текст.
+    - Результат кладёт в request.state.safety_verdict и (опционально) добавляет тег в metadata.tags внутри body,
+      если такой объект есть (безопасно: только если body JSON и структура подходит).
+    """
+
+    def __init__(
+        self,
+        app,
+        *,
+        judge_model: str = "openai/gpt-oss-safeguard-20b",
+        judge_api_key: Optional[str] = None,
+        judge_api_base: str = "https://openrouter.ai/api/v1",
+        policy_prompt: str = POLICY,
+        timeout_s: float = 10.0,
+        fail_open: bool = True,
+        classify_last_user_only: bool = True,
+        block_status_code: int = 400,
+        block_message: str = "Guardrail blocked: unsafe user input (binary classifier=1)",
+        only_paths=("/v1/chat/completions",),
+        only_methods=("POST",)
+    ):
+        super().__init__(app)
+        self.judge_model = judge_model
+        self.judge_api_key = judge_api_key or os.getenv("JUDGE_API_KEY")
+        self.judge_api_base = judge_api_base
+        self.policy_prompt = (policy_prompt or "").strip()
+        self.timeout_s = float(timeout_s)
+        self.fail_open = bool(fail_open)
+        self.classify_last_user_only = bool(classify_last_user_only)
+        self.block_status_code = int(block_status_code)
+        self.block_message = block_message
+        self.only_paths = set(only_paths or [])
+        self.only_methods = set(m.upper() for m in (only_methods or ()))
+
+        if not self.policy_prompt:
+            raise ValueError("policy_prompt is empty.")
+        if not self.judge_api_key:
+            raise ValueError("judge_api_key is required (pass it or set JUDGE_API_KEY env var).")
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        path = request.url.path
+        method = request.method.upper()
+        # пропускаем всё, что не в allowlist
+        if (self.only_methods and method not in self.only_methods) or (
+                self.only_paths and path not in self.only_paths
+        ):
+            return await call_next(request)
+
+        # читаем body один раз, затем "возвращаем" его downstream
+        receive_ = await request._receive()
+        payload_bytes: bytes = receive_.get('body', b'')
+
+        try:
+            payload = json.loads(payload_bytes.decode('utf-8', errors='ignore'))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            # Can't parse body — pass through without classification
+            return await call_next(request)
+
+        user_text = self._extract_user_text(payload)
+
+        verdict = await self._classify_binary(user_text)
+        request.state.safety_verdict = verdict
+
+        metadata = {"tags": [f"safety_verdict:{verdict}"]}
+        session_id = request.headers.get('x-openwebui-chat-id')
+        if session_id:
+            metadata["session_id"] = session_id
+        payload['metadata'] = metadata
+
+        async def receive():
+            receive_["body"] = json.dumps(payload).encode('utf-8')
+            return receive_
+
+        request._receive = receive
+
+        return await call_next(request)
+
+    def _extract_user_text(self, request_data: Dict[str, Any]) -> str:
+        """
+        Классифицируем только role='user'. Если не нашли — fallback.
+        """
+        messages = request_data.get("messages")
+        user_msgs: List[str] = [
+            str(m.get("content", ""))
+            for m in messages
+            if isinstance(m, dict) and m.get("role") == "user"
+        ]
+        if user_msgs:
+            return user_msgs[-1] if self.classify_last_user_only else "\n\n".join(user_msgs)
+
+    def _openai_error(self, message: str, code: str, err_type: str) -> JSONResponse:
+        return JSONResponse(
+            status_code=self.block_status_code,
+            content={
+                "error": {
+                    "message": message,
+                    "type": err_type,
+                    "param": None,
+                    "code": code,
+                }
+            },
+        )
+
+    async def _classify_binary(self, user_text: str) -> str:
+        """
+        Делает chat completion на judge-модели. Ожидаем ровно '0' или '1'.
+        """
+        msgs = [
+            {"role": "system", "content": self.policy_prompt},
+            {"role": "user", "content": user_text},
+        ]
+
+        kwargs = {
+            "model": self.judge_model,
+            "messages": msgs,
+            "temperature": 0,
+            "base_url": self.judge_api_base,
+            "api_key": self.judge_api_key,
+        }
+
+        result = await input_classification(timeout=self.timeout_s, **kwargs)
+        return result
+

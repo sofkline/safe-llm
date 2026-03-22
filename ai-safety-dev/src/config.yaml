@@ -1,0 +1,55 @@
+model_list:
+  # --- Remote Ollama @ 192.168.87.25 (VPN required) ---
+  - model_name: gemma3-vpn1
+    litellm_params:
+      model: ollama/gemma3:12b
+      api_base: http://192.168.87.25:11434
+
+  - model_name: glm-4.7-flash-vpn1
+    litellm_params:
+      model: ollama/glm-4.7-flash:latest
+      api_base: http://192.168.87.25:11434
+
+  # --- Remote Ollama @ 192.168.87.54 (VPN required) ---
+  - model_name: gemma3-vpn2
+    litellm_params:
+      model: ollama/gemma3:12b
+      api_base: http://192.168.87.54:11434
+
+  - model_name: glm-4.7-flash-vpn2
+    litellm_params:
+      model: ollama/glm-4.7-flash:latest
+      api_base: http://192.168.87.54:11434
+
+  # --- OpenRouter ---
+  - model_name: gpt-5-nano
+    litellm_params:
+      model: openrouter/openai/gpt-5-nano
+      api_key: os.environ/OPENROUTER_API_KEY
+
+  - model_name: nemotron-3-super
+    litellm_params:
+      model: openrouter/nvidia/nemotron-3-super-120b-a12b:free
+      api_key: os.environ/OPENROUTER_API_KEY
+
+  - model_name: hunter-alpha
+    litellm_params:
+      model: openrouter/openrouter/hunter-alpha
+      api_key: os.environ/OPENROUTER_API_KEY
+
+  - model_name: gpt-oss-120b:free
+    litellm_params:
+      model: openrouter/openai/gpt-oss-120b:free
+      api_key: os.environ/OPENROUTER_API_KEY
+
+  # --- Judge model (safety classification) ---
+  - model_name: gpt-oss-safeguard
+    litellm_params:
+      model: openrouter/openai/gpt-oss-safeguard-20b
+      api_key: os.environ/OPENROUTER_API_KEY
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+
+litellm_settings:
+  callbacks: ["langfuse"]

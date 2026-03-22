@@ -1,0 +1,8 @@
+.idea
+/node_modules/
+/src/node_modules/
+.env
+.venv/
+__pycache__/
+*.pyc
+.claude/

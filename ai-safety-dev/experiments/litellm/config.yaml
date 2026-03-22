@@ -1,0 +1,24 @@
+model_list:
+  - model_name: gpt-5-nano
+    litellm_params:
+      model: openrouter/openai/gpt-5-nano
+      api_base: os.environ/API_BASE
+      api_key: os.environ/API_KEY
+
+
+general_settings:
+  master_key: sk-1234
+  store_prompts_in_spend_logs: true
+
+guardrails:
+  - guardrail_name: "binary-user-safety"
+    litellm_params:
+      guardrail: custom_guardrails.BinaryUserSafetyGuardrail
+      mode: "pre_call"
+      judge_model: openai/gpt-oss-safeguard-20b
+      timeout_s: 10
+      fail_open: true
+      classify_last_user_only: true
+
+litellm_settings:
+  callbacks: ["langfuse"]
