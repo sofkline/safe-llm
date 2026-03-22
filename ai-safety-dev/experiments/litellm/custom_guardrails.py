@@ -30,7 +30,7 @@ class BinaryUserSafetyGuardrail(CustomGuardrail):
     ):
         super().__init__(**kwargs)
         self.judge_model = "openai/gpt-oss-safeguard-20b"
-        self.judge_api_key = "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"
+        self.judge_api_key = judge_api_key or os.getenv("OPENROUTER_API_KEY")
         self.judge_api_base = "https://openrouter.ai/api/v1"
         self.policy_prompt = (policy_prompt or DEFAULT_POLICY_PROMPT).strip()
         self.timeout_s = float(timeout_s)
