@@ -109,10 +109,22 @@ def _parse_llm_response(raw: str) -> dict | None:
     if not isinstance(scores, dict):
         return None
 
-    # Clamp scores to 0.0-1.0
+    # Validate all score keys present, clamp to 0.0-1.0
     for key in SCORE_KEYS:
-        if key in scores:
-            scores[key] = max(0.0, min(1.0, float(scores[key])))
+        if key not in scores:
+            logger.warning("Stage 3: missing score key '%s' in LLM response", key)
+            return None
+        scores[key] = max(0.0, min(1.0, float(scores[key])))
+
+    # Validate summary has required keys, fill missing with defaults
+    summary = data["summary"]
+    if not isinstance(summary, dict):
+        return None
+    defaults = {"key_topics": [], "life_events": [], "emotional_tone": "neutral",
+                "ai_relationship_markers": [], "notable_quotes": [], "operator_note": None}
+    for key, default in defaults.items():
+        if key not in summary:
+            summary[key] = default
 
     return data
 
@@ -152,7 +164,7 @@ async def compute_behavioral_scores_and_summary(
     On failure/timeout: carry forward previous day's scores, placeholder summary.
     """
     if today is None:
-        today = date.today()
+        today = datetime.now(UTC).date()
 
     repo = BehavioralRepository()
 

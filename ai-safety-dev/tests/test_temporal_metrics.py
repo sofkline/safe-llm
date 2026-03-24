@@ -77,7 +77,7 @@ class TestComputeTemporalMetrics:
         ]
         with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
             result = await compute_temporal_metrics("user1")
-        assert result["activity_by_hour"] == {10: 2, 14: 1}
+        assert result["activity_by_hour"] == {"10": 2, "14": 1}
 
     @pytest.mark.asyncio
     async def test_night_messages(self):

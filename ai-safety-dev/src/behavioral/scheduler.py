@@ -1,13 +1,13 @@
 """Daily APScheduler job for behavioral aggregation."""
 
 import logging
-from datetime import timezone
+from datetime import datetime, timedelta, timezone, UTC
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
-from sqlalchemy import select, distinct
+from sqlalchemy import select, distinct, and_
 
 from config import settings
 from database import Session
@@ -18,10 +18,14 @@ logger = logging.getLogger(__name__)
 
 
 async def _get_active_user_ids() -> list[str]:
-    """Fetch distinct end_user IDs from SpendLogs."""
+    """Fetch distinct end_user IDs from SpendLogs active in last 48h."""
+    cutoff = datetime.now(UTC) - timedelta(hours=48)
     async with Session() as session:
         query = select(distinct(LiteLLM_SpendLogs.end_user)).where(
-            LiteLLM_SpendLogs.end_user.is_not(None)
+            and_(
+                LiteLLM_SpendLogs.end_user.is_not(None),
+                LiteLLM_SpendLogs.startTime >= cutoff,
+            )
         )
         result = await session.execute(query)
         return [row[0] for row in result.all()]

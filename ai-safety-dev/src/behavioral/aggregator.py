@@ -30,8 +30,8 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
     and optionally write BehavioralEvent if zone changed.
     """
     repo = BehavioralRepository()
-    today = date.today()
     now = datetime.now(UTC)
+    today = now.date()
 
     logger.info("Aggregator starting for user %s", end_user_id)
 
@@ -133,7 +133,7 @@ def _compute_is_notable(summary_data: dict, behavioral_scores: dict) -> bool:
         return True
     if summary_data.get("ai_relationship_markers"):
         return True
-    tone = summary_data.get("emotional_tone", "neutral")
+    tone = summary_data.get("emotional_tone", "neutral").lower().strip()
     if tone not in ("neutral", "calm", "normal"):
         return True
     if behavioral_scores.get("topic_concentration", 0) > 0.7:

@@ -78,10 +78,11 @@ async def compute_temporal_metrics(end_user_id: str) -> dict:
     # 1. daily_message_count
     daily_message_count = len(timestamps)
 
-    # 2. activity_by_hour — histogram {0: N, ..., 23: N}
+    # 2. activity_by_hour — histogram {"0": N, ..., "23": N}
+    # String keys for JSON round-trip compatibility (PostgreSQL JSON returns string keys)
     activity_by_hour = {}
     for ts in timestamps:
-        h = ts.hour
+        h = str(ts.hour)
         activity_by_hour[h] = activity_by_hour.get(h, 0) + 1
 
     # 3. night_messages — hours 22, 23, 0, 1, 2, 3
