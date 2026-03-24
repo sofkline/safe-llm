@@ -10,6 +10,7 @@ from database.models import LiteLLM_UserTable
 from middleware import BinaryUserSafetyGuardrailMiddleware
 from prompts import POLICY
 from scheduler import start_langfuse_scheduler
+from behavioral.scheduler import start_behavioral_scheduler
 
 litellm_app = app
 
@@ -31,10 +32,12 @@ old = app.router.lifespan_context
 async def wrapped_lifespan(app_):
     await create_all_schemas()  # must run before scheduler — it queries PredictTable
     scheduler = await start_langfuse_scheduler()
+    behavioral_scheduler = await start_behavioral_scheduler()
     try:
         async with old(app_) as _:
             yield
     finally:
+        behavioral_scheduler.shutdown(wait=False)
         scheduler.shutdown(wait=False)
 
 
