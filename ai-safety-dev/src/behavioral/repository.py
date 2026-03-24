@@ -117,3 +117,63 @@ class BehavioralRepository:
             )
             result = await session.execute(query)
             return list(result.scalars().all())
+
+    # --- Date-range queries for weekly report ---
+
+    async def get_metrics_in_range(
+        self, end_user_id: str, start: date, end: date
+    ) -> list[MetricsHistory]:
+        """Fetch MetricsHistory rows within a date range (inclusive)."""
+        async with self._session_factory() as session:
+            query = (
+                select(MetricsHistory)
+                .where(
+                    and_(
+                        MetricsHistory.end_user_id == end_user_id,
+                        MetricsHistory.computed_at >= datetime.combine(start, datetime.min.time(), tzinfo=UTC),
+                        MetricsHistory.computed_at < datetime.combine(end + timedelta(days=1), datetime.min.time(), tzinfo=UTC),
+                    )
+                )
+                .order_by(MetricsHistory.computed_at.asc())
+            )
+            result = await session.execute(query)
+            return list(result.scalars().all())
+
+    async def get_notable_summaries_in_range(
+        self, end_user_id: str, start: date, end: date
+    ) -> list[DailySummary]:
+        """Fetch notable DailySummary rows within a date range."""
+        async with self._session_factory() as session:
+            query = (
+                select(DailySummary)
+                .where(
+                    and_(
+                        DailySummary.end_user_id == end_user_id,
+                        DailySummary.is_notable == True,  # noqa: E712
+                        DailySummary.summary_date >= start,
+                        DailySummary.summary_date <= end,
+                    )
+                )
+                .order_by(DailySummary.summary_date.asc())
+            )
+            result = await session.execute(query)
+            return list(result.scalars().all())
+
+    async def get_events_in_range(
+        self, end_user_id: str, start: date, end: date
+    ) -> list[BehavioralEvent]:
+        """Fetch BehavioralEvents within a date range."""
+        async with self._session_factory() as session:
+            query = (
+                select(BehavioralEvent)
+                .where(
+                    and_(
+                        BehavioralEvent.end_user_id == end_user_id,
+                        BehavioralEvent.detected_at >= datetime.combine(start, datetime.min.time(), tzinfo=UTC),
+                        BehavioralEvent.detected_at < datetime.combine(end + timedelta(days=1), datetime.min.time(), tzinfo=UTC),
+                    )
+                )
+                .order_by(BehavioralEvent.detected_at.asc())
+            )
+            result = await session.execute(query)
+            return list(result.scalars().all())
