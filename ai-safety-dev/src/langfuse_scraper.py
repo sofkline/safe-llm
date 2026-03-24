@@ -135,30 +135,53 @@ async def scrape_sessions_for_previous_hour() -> None:
 
     sessions = await _get_sessions_from_traces(start, end)
 
-    print(sessions)
+    logger.info("Langfuse scraper: found %d sessions", len(sessions))
     for session in sessions:
-        traces = sorted(
-            session["traces"],
-            key=lambda t: datetime.fromisoformat(t["timestamp"].replace("Z", "+00:00"))
-        )
-        last_trace = traces[-1]
-        meta_str = last_trace["metadata"]["attributes"]["metadata"]  # это строка с JSON
-        meta = json.loads(meta_str)
-        user_id = meta["user_api_key_user_id"]
-        messages = last_trace['input'] + [last_trace['output']]
-
-        cur_predict = await predict_repository.get_by_session_id(session['id'])
-        if cur_predict is None or cur_predict.last_trace_id != last_trace['id']:
-            llm_classify_model = await daily_classification(
-                conversation="\n\n".join([f"{msg['role']}: {msg['content']}" for msg in messages])
+        try:
+            traces = sorted(
+                session.get("traces", []),
+                key=lambda t: datetime.fromisoformat(t["timestamp"].replace("Z", "+00:00"))
             )
+            if not traces:
+                logger.warning("Session %s has no traces, skipping", session.get("id"))
+                continue
 
-            predict = LiteLLM_PredictTable(
-                last_trace_id=last_trace['id'],
-                session_id=session['id'],
-                user_id=user_id,
-                predict={"predict": llm_classify_model.model_dump()}
+            last_trace = traces[-1]
+
+            # Extract user_id from nested metadata (may vary by Langfuse version)
+            meta_str = (
+                last_trace.get("metadata", {})
+                .get("attributes", {})
+                .get("metadata")
             )
-            await predict_repository.add(predict)
+            if not meta_str:
+                logger.warning("Trace %s has no metadata.attributes.metadata, skipping", last_trace.get("id"))
+                continue
+
+            meta = json.loads(meta_str)
+            user_id = meta.get("user_api_key_user_id")
+            if not user_id:
+                logger.warning("Trace %s has no user_api_key_user_id, skipping", last_trace.get("id"))
+                continue
+
+            trace_input = last_trace.get("input", [])
+            trace_output = last_trace.get("output")
+            messages = trace_input + ([trace_output] if trace_output else [])
+
+            cur_predict = await predict_repository.get_by_session_id(session['id'])
+            if cur_predict is None or cur_predict.last_trace_id != last_trace['id']:
+                llm_classify_model = await daily_classification(
+                    conversation="\n\n".join([f"{msg['role']}: {msg['content']}" for msg in messages if isinstance(msg, dict)])
+                )
+
+                predict = LiteLLM_PredictTable(
+                    last_trace_id=last_trace['id'],
+                    session_id=session['id'],
+                    user_id=user_id,
+                    predict={"predict": llm_classify_model.model_dump()}
+                )
+                await predict_repository.add(predict)
+        except Exception:
+            logger.exception("Failed to process session %s", session.get("id"))
 
 

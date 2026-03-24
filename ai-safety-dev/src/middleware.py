@@ -122,6 +122,7 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
         ]
         if user_msgs:
             return user_msgs[-1] if self.classify_last_user_only else "\n\n".join(user_msgs)
+        return ""
 
     def _openai_error(self, message: str, code: str, err_type: str) -> JSONResponse:
         return JSONResponse(
