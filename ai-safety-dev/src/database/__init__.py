@@ -18,6 +18,7 @@ Session = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=
 
 
 async def create_all_schemas():
+    import behavioral.models  # noqa: F401 — registers tables with Base.metadata
     async with engine.begin() as conn:
         await asyncio.sleep(1)
         await conn.run_sync(Base.metadata.create_all)
