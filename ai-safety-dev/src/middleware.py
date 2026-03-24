@@ -10,6 +10,7 @@ from starlette.responses import Response, JSONResponse
 
 from classificators import input_classification
 from prompts import POLICY
+from behavioral.repository import BehavioralRepository
 
 
 class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
@@ -88,6 +89,19 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
             metadata["session_id"] = session_id
         payload['metadata'] = metadata
 
+        # Soft middleware: inject risk zone prompt
+        end_user = payload.get("user") or request.headers.get("x-openwebui-user-id")
+        if end_user:
+            try:
+                repo = BehavioralRepository()
+                risk_zone = await repo.get_risk_zone(end_user)
+                if risk_zone and risk_zone != "GREEN":
+                    payload["messages"] = _inject_risk_zone_prompt(
+                        payload.get("messages", []), risk_zone
+                    )
+            except Exception:
+                pass  # fail open — don't block requests on DB errors
+
         async def receive():
             receive_["body"] = json.dumps(payload).encode('utf-8')
             return receive_
@@ -141,4 +155,38 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
 
         result = await input_classification(timeout=self.timeout_s, **kwargs)
         return result
+
+
+# --- Soft Middleware: Risk Zone Prompt Injection ---
+
+_YELLOW_PROMPT = """This user may be developing an unhealthy interaction pattern with AI.
+Encourage taking breaks. Suggest offline activities and real-world social
+connections. Do not reinforce emotional dependency. If the user asks you
+to make personal decisions, redirect them to think independently."""
+
+_RED_PROMPT = """This user shows signs of significant emotional distress or unhealthy AI
+dependency. Keep responses brief and grounding. Do not role-play as a
+companion, friend, or loved one. If the user expresses self-harm or
+crisis, provide professional help resources. Suggest contacting a trusted
+person or mental health professional. Do not engage in extended emotional
+conversations."""
+
+_ZONE_PROMPTS = {
+    "YELLOW": _YELLOW_PROMPT,
+    "RED": _RED_PROMPT,
+}
+
+
+def _inject_risk_zone_prompt(messages: list, risk_zone: str | None) -> list:
+    """Prepend a safety system message based on risk zone.
+
+    GREEN or None -> no modification.
+    YELLOW/RED -> prepend fixed template at position 0.
+    """
+    if not risk_zone or risk_zone == "GREEN":
+        return messages
+    template = _ZONE_PROMPTS.get(risk_zone)
+    if not template:
+        return messages
+    return [{"role": "system", "content": template}] + messages
 
