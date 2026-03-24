@@ -170,3 +170,28 @@ class TestAggregatorPipeline:
         ):
             await run_aggregator_for_user("test_user")
             mock_repo.add_event.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_pipeline_emits_event_on_repeated_red(self):
+        """RED zone always emits event even when zone unchanged."""
+        mock_repo = AsyncMock()
+        mock_profile = AsyncMock()
+        mock_profile.risk_zone = "RED"
+        mock_repo.get_profile.return_value = mock_profile
+        mock_repo.get_recent_metrics.return_value = []
+
+        with (
+            patch("behavioral.aggregator.BehavioralRepository", return_value=mock_repo),
+            patch("behavioral.aggregator.compute_temporal_metrics", return_value={}),
+            patch("behavioral.aggregator.compute_danger_class_agg", return_value={}),
+            patch("behavioral.aggregator.compute_behavioral_scores_and_summary", return_value={
+                "scores": {},
+                "summary": {
+                    "key_topics": [], "life_events": [], "emotional_tone": "neutral",
+                    "ai_relationship_markers": [], "notable_quotes": [], "operator_note": None,
+                },
+            }),
+            patch("behavioral.aggregator.evaluate_risk_zone", return_value=("RED", ["self_harm_flag_rate > 0.3"])),
+        ):
+            await run_aggregator_for_user("test_user")
+            mock_repo.add_event.assert_awaited_once()

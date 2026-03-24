@@ -59,7 +59,9 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
 
     # Stage 4
     risk_zone, triggered_rules = await evaluate_risk_zone(
-        temporal_metrics, danger_class_agg, behavioral_scores
+        temporal_metrics, danger_class_agg, behavioral_scores,
+        baselines=baselines,
+        recent_history=recent_history,
     )
     logger.info("Stage 4 complete for %s: zone=%s, triggers=%s", end_user_id, risk_zone, triggered_rules)
 
@@ -109,7 +111,7 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
     await repo.upsert_profile(profile)
 
     # 4. Write BehavioralEvent if zone changed or RED
-    if risk_zone != old_zone:
+    if risk_zone != old_zone or risk_zone == "RED":
         event = BehavioralEvent(
             end_user_id=end_user_id,
             detected_at=now,
