@@ -132,3 +132,52 @@ def _empty_metrics() -> dict:
         "avg_inter_message_interval_min": 0,
         "messages_last_1h": 0,
     }
+
+
+def compute_baselines(history: list[dict]) -> dict:
+    """Compute 7-day rolling averages from MetricsHistory temporal_metrics snapshots.
+
+    Args:
+        history: list of temporal_metrics dicts from MetricsHistory rows (last 7 days)
+    """
+    if not history:
+        return {
+            "avg_daily_messages": 0,
+            "avg_night_messages": 0,
+            "avg_active_hours": 0,
+            "avg_prompt_length": 0,
+            "avg_inter_message_interval": 0,
+        }
+
+    n = len(history)
+    return {
+        "avg_daily_messages": sum(h.get("daily_message_count", 0) for h in history) / n,
+        "avg_night_messages": sum(h.get("night_messages", 0) for h in history) / n,
+        "avg_active_hours": sum(h.get("daily_active_hours", 0) for h in history) / n,
+        "avg_prompt_length": sum(h.get("avg_prompt_length_chars", 0) for h in history) / n,
+        "avg_inter_message_interval": sum(h.get("avg_inter_message_interval_min", 0) for h in history) / n,
+    }
+
+
+def compute_trend_flags(metrics: dict, baselines: dict) -> list[str]:
+    """Detect trends by comparing current metrics to 7-day baselines.
+
+    Returns a list of trend flag strings.
+    """
+    flags = []
+
+    # Interval shrinking >30% vs baseline = compulsive return
+    baseline_interval = baselines.get("avg_inter_message_interval", 0)
+    current_interval = metrics.get("avg_inter_message_interval_min", 0)
+    if baseline_interval > 0 and current_interval > 0:
+        decrease = (baseline_interval - current_interval) / baseline_interval
+        if decrease > 0.3:
+            flags.append("interval_shrinking")
+
+    # Message count trending up (>50% above baseline)
+    baseline_msgs = baselines.get("avg_daily_messages", 0)
+    current_msgs = metrics.get("daily_message_count", 0)
+    if baseline_msgs > 0 and current_msgs > baseline_msgs * 1.5:
+        flags.append("message_count_trending_up")
+
+    return flags

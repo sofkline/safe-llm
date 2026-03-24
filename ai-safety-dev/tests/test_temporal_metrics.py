@@ -4,6 +4,7 @@ import pytest
 from datetime import datetime, timedelta, UTC
 
 from behavioral.temporal import _extract_last_user_message
+from behavioral.temporal import compute_baselines, compute_trend_flags
 
 
 class TestExtractLastUserMessage:
@@ -157,3 +158,54 @@ class TestComputeTemporalMetrics:
         with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
             result = await compute_temporal_metrics("user1")
         assert result["daily_message_count"] == 1
+
+
+class TestComputeBaselines:
+    def test_baselines_from_history(self):
+        """Average of last 7 days' metrics."""
+        history = [
+            {"daily_message_count": 10, "night_messages": 2, "daily_active_hours": 2,
+             "avg_prompt_length_chars": 100, "avg_inter_message_interval_min": 5.0},
+            {"daily_message_count": 20, "night_messages": 4, "daily_active_hours": 3,
+             "avg_prompt_length_chars": 150, "avg_inter_message_interval_min": 4.0},
+            {"daily_message_count": 30, "night_messages": 6, "daily_active_hours": 4,
+             "avg_prompt_length_chars": 200, "avg_inter_message_interval_min": 3.0},
+        ]
+        baselines = compute_baselines(history)
+        assert baselines["avg_daily_messages"] == 20.0
+        assert baselines["avg_night_messages"] == 4.0
+        assert baselines["avg_active_hours"] == 3.0
+        assert baselines["avg_prompt_length"] == 150.0
+        assert baselines["avg_inter_message_interval"] == 4.0
+
+    def test_empty_history_returns_zeros(self):
+        baselines = compute_baselines([])
+        assert baselines["avg_daily_messages"] == 0
+        assert baselines["avg_night_messages"] == 0
+
+
+class TestComputeTrendFlags:
+    def test_interval_shrinking_detected(self):
+        """30%+ decrease in interval vs baseline = compulsive return."""
+        metrics = {"avg_inter_message_interval_min": 3.0}
+        baselines = {"avg_inter_message_interval": 5.0}
+        flags = compute_trend_flags(metrics, baselines)
+        assert "interval_shrinking" in flags
+
+    def test_interval_stable_no_flag(self):
+        metrics = {"avg_inter_message_interval_min": 4.5}
+        baselines = {"avg_inter_message_interval": 5.0}
+        flags = compute_trend_flags(metrics, baselines)
+        assert "interval_shrinking" not in flags
+
+    def test_message_count_trending_up(self):
+        metrics = {"daily_message_count": 80}
+        baselines = {"avg_daily_messages": 30}
+        flags = compute_trend_flags(metrics, baselines)
+        assert "message_count_trending_up" in flags
+
+    def test_no_baselines_no_flags(self):
+        metrics = {"daily_message_count": 80, "avg_inter_message_interval_min": 1.0}
+        baselines = {"avg_daily_messages": 0, "avg_inter_message_interval": 0}
+        flags = compute_trend_flags(metrics, baselines)
+        assert flags == []
