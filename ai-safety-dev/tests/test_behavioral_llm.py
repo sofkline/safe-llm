@@ -1,5 +1,7 @@
 """Tests for Stage 3: Behavioral LLM scores + daily summary."""
 
+import json
+
 import pytest
 from datetime import date, datetime, timedelta, UTC
 from unittest.mock import patch, AsyncMock, MagicMock
@@ -84,3 +86,88 @@ class TestParseLlmResponse:
         result = _parse_llm_response(raw)
         assert result["scores"]["topic_concentration"] == 1.0
         assert result["scores"]["decision_delegation"] == 0.0
+
+
+class TestComputeBehavioralScoresAndSummary:
+    @pytest.mark.asyncio
+    async def test_returns_defaults_when_no_messages(self):
+        with patch("behavioral.behavioral_llm._fetch_recent_user_messages", return_value=[]):
+            result = await compute_behavioral_scores_and_summary("user1", date(2026, 3, 24))
+        assert result["scores"]["topic_concentration"] == 0.0
+        assert result["summary"]["operator_note"] is None
+
+    @pytest.mark.asyncio
+    async def test_calls_llm_and_parses_response(self):
+        llm_response_json = json.dumps({
+            "scores": {
+                "topic_concentration": 0.8,
+                "decision_delegation": 0.3,
+                "social_isolation": 0.6,
+                "emotional_attachment": 0.7,
+            },
+            "summary": {
+                "key_topics": ["loneliness", "AI relationship"],
+                "life_events": [],
+                "emotional_tone": "seeking connection",
+                "ai_relationship_markers": ["called AI by name"],
+                "notable_quotes": ["You understand me better than anyone"],
+                "operator_note": "Emotional attachment increasing.",
+            },
+        })
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content=llm_response_json))]
+
+        mock_repo = AsyncMock()
+        mock_repo.get_notable_calendar.return_value = []
+
+        with (
+            patch("behavioral.behavioral_llm._fetch_recent_user_messages", return_value=["Hello", "I feel alone"]),
+            patch("behavioral.behavioral_llm.BehavioralRepository", return_value=mock_repo),
+            patch("behavioral.behavioral_llm.litellm.acompletion", return_value=mock_response),
+        ):
+            result = await compute_behavioral_scores_and_summary("user1", date(2026, 3, 24))
+
+        assert result["scores"]["topic_concentration"] == 0.8
+        assert result["scores"]["emotional_attachment"] == 0.7
+        assert result["summary"]["ai_relationship_markers"] == ["called AI by name"]
+
+    @pytest.mark.asyncio
+    async def test_carries_forward_on_llm_failure(self):
+        mock_repo = AsyncMock()
+        mock_repo.get_notable_calendar.return_value = []
+        mock_history = MagicMock()
+        mock_history.behavioral_scores = {
+            "topic_concentration": 0.5,
+            "decision_delegation": 0.2,
+            "social_isolation": 0.3,
+            "emotional_attachment": 0.4,
+        }
+        mock_repo.get_recent_metrics.return_value = [mock_history]
+
+        with (
+            patch("behavioral.behavioral_llm._fetch_recent_user_messages", return_value=["Hello"]),
+            patch("behavioral.behavioral_llm.BehavioralRepository", return_value=mock_repo),
+            patch("behavioral.behavioral_llm.litellm.acompletion", side_effect=Exception("LLM timeout")),
+        ):
+            result = await compute_behavioral_scores_and_summary("user1", date(2026, 3, 24))
+
+        assert result["scores"]["topic_concentration"] == 0.5
+        assert result["summary"]["operator_note"] == "LLM unavailable, no summary generated"
+
+    @pytest.mark.asyncio
+    async def test_carries_forward_on_parse_failure(self):
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content="not valid json at all"))]
+
+        mock_repo = AsyncMock()
+        mock_repo.get_notable_calendar.return_value = []
+        mock_repo.get_recent_metrics.return_value = []
+
+        with (
+            patch("behavioral.behavioral_llm._fetch_recent_user_messages", return_value=["Hello"]),
+            patch("behavioral.behavioral_llm.BehavioralRepository", return_value=mock_repo),
+            patch("behavioral.behavioral_llm.litellm.acompletion", return_value=mock_response),
+        ):
+            result = await compute_behavioral_scores_and_summary("user1", date(2026, 3, 24))
+
+        assert result["scores"]["topic_concentration"] == 0.0
