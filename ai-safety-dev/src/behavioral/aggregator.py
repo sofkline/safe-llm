@@ -10,7 +10,7 @@ from behavioral.models import (
     BehavioralEvent,
 )
 from behavioral.repository import BehavioralRepository
-from behavioral.temporal import compute_temporal_metrics
+from behavioral.temporal import compute_temporal_metrics, compute_baselines, compute_trend_flags
 from behavioral.danger_agg import compute_danger_class_agg
 from behavioral.behavioral_llm import compute_behavioral_scores_and_summary
 from behavioral.risk_engine import evaluate_risk_zone
@@ -38,6 +38,14 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
     # Stage 1
     temporal_metrics = await compute_temporal_metrics(end_user_id)
     logger.info("Stage 1 complete for %s", end_user_id)
+
+    # Baselines: 7-day rolling avg from MetricsHistory
+    recent_history = await repo.get_recent_metrics(end_user_id, days=7)
+    past_temporal = [h.temporal_metrics for h in recent_history if h.temporal_metrics]
+    baselines = compute_baselines(past_temporal)
+    trend_flags = compute_trend_flags(temporal_metrics, baselines)
+    if trend_flags:
+        logger.info("Trend flags for %s: %s", end_user_id, trend_flags)
 
     # Stage 2
     danger_class_agg = await compute_danger_class_agg(end_user_id)
@@ -94,7 +102,7 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
         danger_class_scores=danger_class_agg,
         behavioral_scores=behavioral_scores,
         temporal_summary=temporal_metrics,
-        temporal_baselines={},  # TODO: compute 7-day rolling avg in Milestone 2
+        temporal_baselines=baselines,
         last_assessed_at=now,
         updated_at=now,
     )

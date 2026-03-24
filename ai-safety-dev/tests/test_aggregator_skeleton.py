@@ -86,6 +86,7 @@ class TestAggregatorPipeline:
     async def test_pipeline_runs_all_stages(self):
         """Verify all 4 stages execute and post-write steps complete."""
         mock_repo = AsyncMock()
+        mock_repo.get_recent_metrics.return_value = []
         mock_repo.get_profile.return_value = None  # new user
 
         with (
@@ -124,6 +125,7 @@ class TestAggregatorPipeline:
     async def test_pipeline_emits_event_on_zone_change(self):
         """Verify BehavioralEvent is written when zone changes."""
         mock_repo = AsyncMock()
+        mock_repo.get_recent_metrics.return_value = []
         mock_profile = AsyncMock()
         mock_profile.risk_zone = "GREEN"
         mock_repo.get_profile.return_value = mock_profile
@@ -148,6 +150,7 @@ class TestAggregatorPipeline:
     async def test_pipeline_no_event_when_zone_unchanged(self):
         """Verify no BehavioralEvent when zone stays the same."""
         mock_repo = AsyncMock()
+        mock_repo.get_recent_metrics.return_value = []
         mock_profile = AsyncMock()
         mock_profile.risk_zone = "GREEN"
         mock_repo.get_profile.return_value = mock_profile
