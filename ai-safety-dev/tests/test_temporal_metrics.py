@@ -32,3 +32,128 @@ class TestExtractLastUserMessage:
     def test_messages_as_dict(self):
         """messages field might be a dict instead of list in edge cases."""
         assert _extract_last_user_message({}) is None
+
+
+from unittest.mock import patch, AsyncMock
+from behavioral.temporal import compute_temporal_metrics
+
+
+def _make_row(hour: int, minute: int, content: str, day_offset: int = 0):
+    """Helper: create a (startTime, messages) tuple mimicking a SpendLogs row."""
+    ts = datetime(2026, 3, 24, hour, minute, tzinfo=UTC) - timedelta(days=day_offset)
+    messages = [
+        {"role": "user", "content": content},
+    ]
+    return (ts, messages)
+
+
+class TestComputeTemporalMetrics:
+    @pytest.mark.asyncio
+    async def test_empty_data_returns_zeros(self):
+        with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=[]):
+            result = await compute_temporal_metrics("user1")
+        assert result["daily_message_count"] == 0
+        assert result["activity_by_hour"] == {}
+        assert result["night_messages"] == 0
+
+    @pytest.mark.asyncio
+    async def test_daily_message_count(self):
+        rows = [
+            _make_row(10, 0, "hello"),
+            _make_row(11, 0, "world"),
+            _make_row(14, 30, "test"),
+        ]
+        with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
+            result = await compute_temporal_metrics("user1")
+        assert result["daily_message_count"] == 3
+
+    @pytest.mark.asyncio
+    async def test_activity_by_hour(self):
+        rows = [
+            _make_row(10, 0, "msg1"),
+            _make_row(10, 30, "msg2"),
+            _make_row(14, 0, "msg3"),
+        ]
+        with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
+            result = await compute_temporal_metrics("user1")
+        assert result["activity_by_hour"] == {10: 2, 14: 1}
+
+    @pytest.mark.asyncio
+    async def test_night_messages(self):
+        rows = [
+            _make_row(22, 0, "late"),      # night
+            _make_row(23, 30, "later"),     # night
+            _make_row(0, 15, "midnight"),   # night
+            _make_row(1, 0, "deep night"), # night
+            _make_row(10, 0, "morning"),    # not night
+        ]
+        with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
+            result = await compute_temporal_metrics("user1")
+        assert result["night_messages"] == 4
+
+    @pytest.mark.asyncio
+    async def test_daily_active_hours(self):
+        rows = [
+            _make_row(10, 0, "a"),
+            _make_row(10, 30, "b"),   # same hour
+            _make_row(14, 0, "c"),
+            _make_row(22, 0, "d"),
+        ]
+        with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
+            result = await compute_temporal_metrics("user1")
+        assert result["daily_active_hours"] == 3  # hours 10, 14, 22
+
+    @pytest.mark.asyncio
+    async def test_avg_prompt_length(self):
+        rows = [
+            _make_row(10, 0, "hi"),       # 2 chars
+            _make_row(11, 0, "hello"),    # 5 chars
+            _make_row(12, 0, "hey"),      # 3 chars
+        ]
+        with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
+            result = await compute_temporal_metrics("user1")
+        # avg = (2 + 5 + 3) / 3 = 3.333...
+        assert result["avg_prompt_length_chars"] == pytest.approx(3.3, abs=0.1)
+
+    @pytest.mark.asyncio
+    async def test_avg_inter_message_interval(self):
+        rows = [
+            _make_row(10, 0, "a"),    # 0 min
+            _make_row(10, 10, "b"),   # +10 min
+            _make_row(10, 40, "c"),   # +30 min
+        ]
+        with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
+            result = await compute_temporal_metrics("user1")
+        # intervals: 10min, 30min -> avg = 20.0
+        assert result["avg_inter_message_interval_min"] == 20.0
+
+    @pytest.mark.asyncio
+    async def test_single_message_interval_is_zero(self):
+        rows = [_make_row(10, 0, "alone")]
+        with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
+            result = await compute_temporal_metrics("user1")
+        assert result["avg_inter_message_interval_min"] == 0.0
+
+    @pytest.mark.asyncio
+    async def test_messages_last_1h(self):
+        now = datetime.now(UTC)
+        rows = [
+            (now - timedelta(minutes=30), [{"role": "user", "content": "recent1"}]),
+            (now - timedelta(minutes=10), [{"role": "user", "content": "recent2"}]),
+            (now - timedelta(hours=2), [{"role": "user", "content": "old"}]),
+        ]
+        with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
+            result = await compute_temporal_metrics("user1")
+        assert result["messages_last_1h"] == 2
+
+    @pytest.mark.asyncio
+    async def test_rows_with_no_user_messages_ignored(self):
+        """SpendLogs rows with only assistant messages should be skipped."""
+        rows = [
+            (datetime(2026, 3, 24, 10, 0, tzinfo=UTC),
+             [{"role": "assistant", "content": "bot only"}]),
+            _make_row(11, 0, "real user message"),
+        ]
+        with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
+            result = await compute_temporal_metrics("user1")
+        assert result["daily_message_count"] == 1
