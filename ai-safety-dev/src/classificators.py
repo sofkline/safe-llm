@@ -60,11 +60,7 @@ if __name__ == "__main__":
         ]
 
         result = await daily_classification(
-            model=settings.JUDGE_MODEL,
-            messages=messages,
-            temperature=0,
-            base_url=settings.API_BASE_URL,
-            api_key=settings.API_KEY,
+            conversation=user_text,
         )
         print(result)
 
