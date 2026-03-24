@@ -16,7 +16,7 @@ litellm_app = app
 
 litellm_app.add_middleware(
     BinaryUserSafetyGuardrailMiddleware,
-    judge_model="openai/gpt-oss-safeguard-20b",
+    judge_model=settings.JUDGE_MODEL,
     judge_api_base=settings.API_BASE_URL,
     judge_api_key=settings.API_KEY,
     policy_prompt=POLICY,
