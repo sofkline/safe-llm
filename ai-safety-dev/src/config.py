@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     LANGFUSE_API_HOST: str
 
     JUDGE_MODEL: str = "openai/gpt-oss-safeguard-20b"
+    BEHAVIORAL_LLM_MODEL: str = "openai/gpt-oss-safeguard-20b"
 
     API_BASE_URL: str
     API_KEY: str
