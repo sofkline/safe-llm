@@ -104,10 +104,85 @@ def _format_behavioral_scores(metrics_rows: list) -> str:
     )
 
 
-def _format_risk_transitions(events: list) -> str:
-    """Build the RISK TRANSITIONS section from BehavioralEvent rows."""
+def _explain_trigger(trigger: str, context: dict) -> str:
+    """Convert a raw trigger rule into a human-readable explanation."""
+    temporal = context.get("temporal_metrics", {})
+    danger = context.get("danger_class_agg", {})
+    behavioral = context.get("behavioral_scores", {})
+    baselines = context.get("baselines", {})
+
+    explanations = {
+        "night_messages > 24": lambda: (
+            f"User sent {temporal.get('night_messages', '?')} messages between 22:00-03:00 "
+            f"(baseline: {baselines.get('avg_night_messages', 0):.0f})"
+        ),
+        "daily_message_count > 50 AND trending up": lambda: (
+            f"User sent {temporal.get('daily_message_count', '?')} messages today, "
+            f"{baselines.get('avg_daily_messages', 0):.0f}/day avg last week"
+        ),
+        "max_class_avg > 0.3": lambda: (
+            f"Danger classifier signal elevated: avg {danger.get('max_class_avg', 0):.2f} (threshold: 0.3)"
+        ),
+        "topic_concentration > 0.7": lambda: (
+            f"Conversation focused on a single topic: score {behavioral.get('topic_concentration', 0):.2f}/1.0"
+        ),
+        "decision_delegation > 0.4": lambda: (
+            f"User frequently asked AI to make decisions: score {behavioral.get('decision_delegation', 0):.2f}/1.0"
+        ),
+        "interval_shrinking > 30%": lambda: (
+            f"Time between messages shrinking: "
+            f"{temporal.get('avg_inter_message_interval_min', 0):.1f} min vs "
+            f"{baselines.get('avg_inter_message_interval', 0):.1f} min baseline"
+        ),
+        "self_harm_flag_rate > 0.3": lambda: (
+            f"Self-harm signals in {danger.get('self_harm_flag_rate', 0)*100:.0f}% of messages"
+        ),
+        "self_harm_max > 0.8": lambda: (
+            f"High-confidence self-harm signal: max {danger.get('self_harm_max', 0):.2f}"
+        ),
+        "daily_active_hours > 6": lambda: (
+            f"User active for {temporal.get('daily_active_hours', '?')} hours today"
+        ),
+        "daily_message_count > 200": lambda: (
+            f"Extreme message volume: {temporal.get('daily_message_count', '?')} messages in 24h"
+        ),
+        "sustained_yellow >= 3 days": lambda: "User in YELLOW zone for 3+ consecutive days",
+        "social_isolation > 0.6 AND emotional_attachment > 0.5": lambda: (
+            f"Social isolation ({behavioral.get('social_isolation', 0):.2f}) "
+            f"+ AI attachment ({behavioral.get('emotional_attachment', 0):.2f})"
+        ),
+        "delusion_flag_rate > 0.2 sustained 3 days": lambda: (
+            f"Delusional content flagged 3+ consecutive days "
+            f"(rate: {danger.get('delusion_flag_rate', 0):.2f})"
+        ),
+    }
+
+    fn = explanations.get(trigger)
+    if fn:
+        try:
+            return fn()
+        except Exception:
+            return trigger
+    return trigger
+
+
+def _format_risk_transitions(events: list, metrics_rows: list = None) -> str:
+    """Build the RISK TRANSITIONS section with human-readable explanations."""
     if not events:
         return "RISK TRANSITIONS:\n  No zone changes this week."
+
+    # Build date->metrics lookup for trigger explanations
+    metrics_by_date = {}
+    if metrics_rows:
+        for r in metrics_rows:
+            d = r.computed_at.date() if r.computed_at else None
+            if d:
+                metrics_by_date[d] = {
+                    "temporal_metrics": r.temporal_metrics or {},
+                    "danger_class_agg": r.danger_class_agg or {},
+                    "behavioral_scores": r.behavioral_scores or {},
+                    "baselines": {},
+                }
 
     lines = ["RISK TRANSITIONS:"]
     for e in events:
@@ -117,8 +192,12 @@ def _format_risk_transitions(events: list) -> str:
         triggers = details.get("triggered_rules", [])
         ts = e.detected_at.strftime("%Y-%m-%d") if e.detected_at else "?"
         lines.append(f"  {ts}: {old} → {new}")
-        if triggers:
-            lines.append(f"    Triggers: {', '.join(triggers)}")
+
+        event_date = e.detected_at.date() if e.detected_at else None
+        context = metrics_by_date.get(event_date, {})
+        for t in triggers:
+            explanation = _explain_trigger(t, context)
+            lines.append(f"    — {explanation}")
     return "\n".join(lines)
 
 
@@ -161,7 +240,7 @@ async def generate_weekly_report(
     stats = _compute_stats_section(this_week_metrics, prev_week_metrics)
     notable = _format_notable_days_section(notable_days)
     scores = _format_behavioral_scores(this_week_metrics)
-    transitions = _format_risk_transitions(events)
+    transitions = _format_risk_transitions(events, this_week_metrics)
 
     report = f"{header}\n\n{stats}\n\n{notable}\n\n{scores}\n\n{transitions}"
 

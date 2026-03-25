@@ -126,6 +126,12 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
         await repo.add_event(event)
         logger.info("Zone change event: %s -> %s for %s", old_zone, risk_zone, end_user_id)
 
+    # 5. Write scores to Langfuse (best-effort)
+    from behavioral.langfuse_scores import write_behavioral_scores_to_langfuse
+    await write_behavioral_scores_to_langfuse(
+        end_user_id, risk_zone, behavioral_scores, danger_class_agg
+    )
+
     logger.info("Aggregator complete for user %s", end_user_id)
 
 

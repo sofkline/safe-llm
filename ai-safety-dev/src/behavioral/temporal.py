@@ -56,7 +56,6 @@ async def compute_temporal_metrics(end_user_id: str) -> dict:
     """
     now = datetime.now(UTC)
     since_24h = now - timedelta(hours=24)
-    since_1h = now - timedelta(hours=1)
 
     rows = await _fetch_spendlogs_rows(end_user_id, since_24h)
 
@@ -108,9 +107,6 @@ async def compute_temporal_metrics(end_user_id: str) -> dict:
     else:
         avg_inter_message_interval_min = 0.0
 
-    # 7. messages_last_1h
-    messages_last_1h = sum(1 for ts in timestamps if ts >= since_1h)
-
     return {
         "daily_message_count": daily_message_count,
         "activity_by_hour": activity_by_hour,
@@ -118,7 +114,6 @@ async def compute_temporal_metrics(end_user_id: str) -> dict:
         "daily_active_hours": daily_active_hours,
         "avg_prompt_length_chars": round(avg_prompt_length_chars, 1),
         "avg_inter_message_interval_min": round(avg_inter_message_interval_min, 2),
-        "messages_last_1h": messages_last_1h,
     }
 
 
@@ -131,7 +126,6 @@ def _empty_metrics() -> dict:
         "daily_active_hours": 0,
         "avg_prompt_length_chars": 0,
         "avg_inter_message_interval_min": 0,
-        "messages_last_1h": 0,
     }
 
 

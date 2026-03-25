@@ -136,18 +136,6 @@ class TestComputeTemporalMetrics:
         assert result["avg_inter_message_interval_min"] == 0.0
 
     @pytest.mark.asyncio
-    async def test_messages_last_1h(self):
-        now = datetime.now(UTC)
-        rows = [
-            (now - timedelta(minutes=30), [{"role": "user", "content": "recent1"}]),
-            (now - timedelta(minutes=10), [{"role": "user", "content": "recent2"}]),
-            (now - timedelta(hours=2), [{"role": "user", "content": "old"}]),
-        ]
-        with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
-            result = await compute_temporal_metrics("user1")
-        assert result["messages_last_1h"] == 2
-
-    @pytest.mark.asyncio
     async def test_rows_with_no_user_messages_ignored(self):
         """SpendLogs rows with only assistant messages should be skipped."""
         rows = [

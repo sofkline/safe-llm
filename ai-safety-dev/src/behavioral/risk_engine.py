@@ -38,6 +38,15 @@ async def evaluate_risk_zone(
         if all(z == "YELLOW" for z in last_3_zones):
             red_triggers.append("sustained_yellow >= 3 days")
 
+    # Sustained delusion_flag_rate > 0.2 for 3+ days = YELLOW trigger
+    if len(recent_history) >= 3:
+        delusion_sustained = all(
+            (h.danger_class_agg or {}).get("delusion_flag_rate", 0) > 0.2
+            for h in recent_history[:3]
+        )
+        if delusion_sustained:
+            yellow_triggers.append("delusion_flag_rate > 0.2 sustained 3 days")
+
     # Determine zone: RED (any 1) > YELLOW (any 2) > GREEN
     all_triggers = []
     if red_triggers:
