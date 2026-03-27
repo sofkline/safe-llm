@@ -82,15 +82,15 @@ class TestComputeTemporalMetrics:
     @pytest.mark.asyncio
     async def test_night_messages(self):
         rows = [
-            _make_row(22, 0, "late"),      # night
-            _make_row(23, 30, "later"),     # night
-            _make_row(0, 15, "midnight"),   # night
-            _make_row(1, 0, "deep night"), # night
-            _make_row(10, 0, "morning"),    # not night
+            _make_row(1, 0, "deep night"),   # night (1:00)
+            _make_row(3, 30, "late night"),   # night (3:30)
+            _make_row(5, 0, "early morning"), # night (5:00)
+            _make_row(10, 0, "morning"),      # not night
+            _make_row(22, 0, "evening"),      # not night
         ]
         with patch("behavioral.temporal._fetch_spendlogs_rows", return_value=rows):
             result = await compute_temporal_metrics("user1")
-        assert result["night_messages"] == 4
+        assert result["night_messages"] == 3
 
     @pytest.mark.asyncio
     async def test_daily_active_hours(self):

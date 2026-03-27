@@ -10,7 +10,7 @@ from database.models import LiteLLM_SpendLogs
 
 logger = logging.getLogger(__name__)
 
-NIGHT_HOURS = {22, 23, 0, 1, 2, 3}
+NIGHT_HOURS = {1, 2, 3, 4, 5}
 
 
 def _extract_last_user_message(messages) -> str | None:
@@ -84,7 +84,7 @@ async def compute_temporal_metrics(end_user_id: str) -> dict:
         h = str(ts.hour)
         activity_by_hour[h] = activity_by_hour.get(h, 0) + 1
 
-    # 3. night_messages — hours 22, 23, 0, 1, 2, 3
+    # 3. night_messages — hours 0, 1, 2, 3
     night_messages = sum(1 for ts in timestamps if ts.hour in NIGHT_HOURS)
 
     # 4. daily_active_hours — distinct hours with >=1 message

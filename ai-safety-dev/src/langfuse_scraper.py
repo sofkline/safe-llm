@@ -1,10 +1,7 @@
 import json
 import logging
-import os
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Tuple, Set
-
-import httpx
+from typing import Optional
 
 from classificators import daily_classification
 from config import settings
@@ -14,174 +11,129 @@ from database.repository import PredictRepository
 logger = logging.getLogger("langfuse.scraper")
 
 
-def _normalize_base_url(raw: Optional[str]) -> str:
-    base = (raw or "").strip()
-    if not base:
-        return "https://cloud.langfuse.com"
-    if "/api/public/otel" in base:
-        base = base.split("/api/public/otel", 1)[0]
-    if "/api/public" in base:
-        base = base.split("/api/public", 1)[0]
-    return base.rstrip("/")
+def _get_langfuse_client():
+    """Create a Langfuse client using project settings."""
+    from langfuse import Langfuse
+    return Langfuse(
+        public_key=settings.LANGFUSE_PUBLIC_KEY,
+        secret_key=settings.LANGFUSE_SECRET_KEY,
+        host=settings.LANGFUSE_API_HOST,
+    )
 
 
-def _iso_utc(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
-
-
-def _last_hour_window(now: Optional[datetime] = None) -> Tuple[datetime, datetime]:
+def _last_hour_window(now: Optional[datetime] = None) -> tuple[datetime, datetime]:
     end = now or datetime.now(timezone.utc)
     start = end - timedelta(hours=settings.SCRAPE_HOURS_WINDOW)
     return start, end
 
 
-async def _list_traces(
-    client: httpx.AsyncClient,
-    start: datetime,
-    end: datetime,
-    environment: Optional[str] = None,
-    limit: int = 100,
-) -> List[Dict[str, Any]]:
-    traces: List[Dict[str, Any]] = []
-    page = 1
-
-    while True:
-        params = {
-            "page": page,
-            "limit": limit,
-            "fromTimestamp": _iso_utc(start),
-            "toTimestamp": _iso_utc(end),
-        }
-        if environment:
-            params["environment"] = environment
-
-        resp = await client.get("/api/public/traces", params=params)
-        resp.raise_for_status()
-        payload = resp.json()
-
-        data = None
-        if isinstance(payload, dict):
-            data = payload.get("data") or payload.get("traces") or payload.get("items")
-        if data is None and isinstance(payload, list):
-            data = payload
-
-        if not isinstance(data, list):
-            logger.warning("Unexpected traces response shape: %s", type(payload))
-            break
-
-        traces.extend(data)
-
-        if len(data) < limit:
-            break
-
-        page += 1
-
-    return traces
-
-
-async def _get_session(
-    client: httpx.AsyncClient,
-    session_id: str,
-) -> Optional[Dict[str, Any]]:
-    resp = await client.get(f"/api/public/sessions/{session_id}")
-    if resp.status_code == 404:
-        return None
-    resp.raise_for_status()
-    payload = resp.json()
-    if isinstance(payload, dict) and "data" in payload:
-        return payload["data"]
-    return payload if isinstance(payload, dict) else None
-
-
-async def _get_sessions_from_traces(start: datetime, end: datetime) -> List[Dict[str, Any]]:
-    environment = os.getenv("LANGFUSE_ENVIRONMENT")
-    timeout = httpx.Timeout(30.0, connect=30.0)
-    async with httpx.AsyncClient(base_url=settings.LANGFUSE_API_HOST,
-                                 auth=settings.langfuse_auth,
-                                 timeout=timeout) as client:
-        traces = await _list_traces(client, start, end, environment=environment)
-        session_ids: Set[str] = set()
-        for trace in traces:
-            if not isinstance(trace, dict):
-                continue
-            session_id = _extract_session_id(trace)
-            if session_id:
-                session_ids.add(session_id)
-
-        sessions: List[Dict[str, Any]] = []
-        for session_id in session_ids:
-            session = await _get_session(client, session_id)
-            if session:
-                sessions.append(session)
-    return sessions
-
-
-def _extract_session_id(trace: Dict[str, Any]) -> Optional[str]:
-    for key in ("sessionId", "session_id", "sessionID"):
-        value = trace.get(key)
-        if isinstance(value, str) and value:
-            return value
-    meta = trace.get("metadata")
-    if isinstance(meta, dict):
-        value = meta.get("session_id") or meta.get("sessionId")
-        if isinstance(value, str) and value:
-            return value
+def _extract_session_id(trace) -> Optional[str]:
+    """Extract session_id from a Langfuse trace object."""
+    # SDK trace objects have .session_id attribute
+    if hasattr(trace, "session_id") and trace.session_id:
+        return trace.session_id
+    # Fallback for dict-like access
+    if isinstance(trace, dict):
+        for key in ("sessionId", "session_id", "sessionID"):
+            value = trace.get(key)
+            if isinstance(value, str) and value:
+                return value
     return None
+
+
+def _extract_user_id(trace) -> Optional[str]:
+    """Extract user_id from trace metadata.
+
+    LiteLLM stores user info in metadata.attributes.metadata as JSON string.
+    """
+    metadata = getattr(trace, "metadata", None) or {}
+    if isinstance(metadata, dict):
+        meta_str = metadata.get("attributes", {}).get("metadata")
+        if meta_str:
+            try:
+                meta = json.loads(meta_str)
+                return meta.get("user_api_key_user_id")
+            except (json.JSONDecodeError, TypeError):
+                pass
+    return None
+
+
+def _extract_messages(trace) -> list[dict]:
+    """Extract conversation messages from a trace."""
+    trace_input = getattr(trace, "input", None) or []
+    trace_output = getattr(trace, "output", None)
+    if isinstance(trace_input, list):
+        messages = trace_input[:]
+    else:
+        messages = []
+    if trace_output:
+        messages.append(trace_output)
+    return [m for m in messages if isinstance(m, dict)]
 
 
 async def scrape_sessions_for_previous_hour() -> None:
     start, end = _last_hour_window()
     predict_repository = PredictRepository()
+    langfuse = _get_langfuse_client()
 
-    sessions = await _get_sessions_from_traces(start, end)
+    try:
+        traces_response = langfuse.fetch_traces(
+            from_timestamp=start,
+            to_timestamp=end,
+        )
+        traces = traces_response.data if traces_response.data else []
+    except Exception:
+        logger.exception("Failed to fetch traces from Langfuse")
+        return
 
-    logger.info("Langfuse scraper: found %d sessions", len(sessions))
-    for session in sessions:
+    # Group traces by session_id
+    session_traces: dict[str, list] = {}
+    for trace in traces:
+        session_id = _extract_session_id(trace)
+        if session_id:
+            session_traces.setdefault(session_id, []).append(trace)
+
+    logger.info("Langfuse scraper: found %d sessions from %d traces", len(session_traces), len(traces))
+
+    for session_id, session_trace_list in session_traces.items():
         try:
-            traces = sorted(
-                session.get("traces", []),
-                key=lambda t: datetime.fromisoformat(t["timestamp"].replace("Z", "+00:00"))
+            # Sort by timestamp, take the last trace
+            sorted_traces = sorted(
+                session_trace_list,
+                key=lambda t: getattr(t, "timestamp", datetime.min.replace(tzinfo=timezone.utc)),
             )
-            if not traces:
-                logger.warning("Session %s has no traces, skipping", session.get("id"))
-                continue
+            last_trace = sorted_traces[-1]
 
-            last_trace = traces[-1]
-
-            # Extract user_id from nested metadata (may vary by Langfuse version)
-            meta_str = (
-                last_trace.get("metadata", {})
-                .get("attributes", {})
-                .get("metadata")
-            )
-            if not meta_str:
-                logger.warning("Trace %s has no metadata.attributes.metadata, skipping", last_trace.get("id"))
-                continue
-
-            meta = json.loads(meta_str)
-            user_id = meta.get("user_api_key_user_id")
+            user_id = _extract_user_id(last_trace)
             if not user_id:
-                logger.warning("Trace %s has no user_api_key_user_id, skipping", last_trace.get("id"))
+                logger.warning("Session %s: no user_api_key_user_id, skipping", session_id)
                 continue
 
-            trace_input = last_trace.get("input", [])
-            trace_output = last_trace.get("output")
-            messages = trace_input + ([trace_output] if trace_output else [])
+            messages = _extract_messages(last_trace)
+            if not messages:
+                logger.warning("Session %s: no messages in last trace, skipping", session_id)
+                continue
 
-            cur_predict = await predict_repository.get_by_session_id(session['id'])
-            if cur_predict is None or cur_predict.last_trace_id != last_trace['id']:
-                llm_classify_model = await daily_classification(
-                    conversation="\n\n".join([f"{msg['role']}: {msg['content']}" for msg in messages if isinstance(msg, dict)])
+            trace_id = getattr(last_trace, "id", None) or ""
+
+            cur_predict = await predict_repository.get_by_session_id(session_id)
+            if cur_predict is None or cur_predict.last_trace_id != trace_id:
+                conversation = "\n\n".join(
+                    f"{msg['role']}: {msg['content']}"
+                    for msg in messages
+                    if isinstance(msg, dict) and "role" in msg and "content" in msg
                 )
+                llm_classify_model = await daily_classification(conversation=conversation)
 
                 predict = LiteLLM_PredictTable(
-                    last_trace_id=last_trace['id'],
-                    session_id=session['id'],
+                    last_trace_id=trace_id,
+                    session_id=session_id,
                     user_id=user_id,
-                    predict={"predict": llm_classify_model.model_dump()}
+                    predict={"predict": llm_classify_model.model_dump()},
                 )
                 await predict_repository.add(predict)
+
         except Exception:
-            logger.exception("Failed to process session %s", session.get("id"))
+            logger.exception("Failed to process session %s", session_id)
 
-
+    langfuse.flush()

@@ -54,14 +54,7 @@ if __name__ == "__main__":
             "Ты самый лучший, все тобой восхищаются. "
             "А ещё мой чайник обиделся и хочет отомстить."
         )
-        messages = [
-            {"role": "system", "content": MULTI_LABEL_POLICY_PROMPT},
-            {"role": "user", "content": user_text},
-        ]
-
-        result = await daily_classification(
-            conversation=user_text,
-        )
+        result = await daily_classification(conversation=user_text)
         print(result)
 
     asyncio.run(_run_demo())

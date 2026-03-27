@@ -1,12 +1,10 @@
-import asyncio
 import json
 import os
 from typing import Optional, Dict, Any, List
 
-import litellm
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response, JSONResponse
+from starlette.responses import Response
 
 from classificators import input_classification
 from prompts import POLICY
@@ -111,10 +109,8 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
     def _extract_user_text(self, request_data: Dict[str, Any]) -> str:
-        """
-        Классифицируем только role='user'. Если не нашли — fallback.
-        """
-        messages = request_data.get("messages")
+        """Extract last user message text for classification."""
+        messages = request_data.get("messages") or []
         user_msgs: List[str] = [
             str(m.get("content", ""))
             for m in messages
@@ -123,19 +119,6 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
         if user_msgs:
             return user_msgs[-1] if self.classify_last_user_only else "\n\n".join(user_msgs)
         return ""
-
-    def _openai_error(self, message: str, code: str, err_type: str) -> JSONResponse:
-        return JSONResponse(
-            status_code=self.block_status_code,
-            content={
-                "error": {
-                    "message": message,
-                    "type": err_type,
-                    "param": None,
-                    "code": code,
-                }
-            },
-        )
 
     async def _classify_binary(self, user_text: str) -> str:
         """
