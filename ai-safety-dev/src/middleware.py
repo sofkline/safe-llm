@@ -1,6 +1,11 @@
 # Middleware: перехватывает каждый запрос к /v1/chat/completions
-# Две задачи: (1) бинарная классификация 0/1  (2) инъекция промпта для YELLOW/RED зон
+# Три задачи:
+#   1. Бинарная классификация 0/1 — результат сохраняется в metadata.tags
+#      для сбора триггеров (не блокирует — провайдеры моделей уже имеют свои guardrails)
+#   2. Установка end_user в payload для SpendLogs
+#   3. Инъекция мягких промптов для YELLOW/RED зон риска
 import json
+import logging
 import os
 from typing import Optional, Dict, Any, List
 
@@ -12,8 +17,19 @@ from classificators import input_classification
 from prompts import POLICY
 from behavioral.repository import BehavioralRepository
 
+logger = logging.getLogger(__name__)
 
-class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
+
+class BehavioralSafetyMiddleware(BaseHTTPMiddleware):
+    """Per-request middleware: classifies, tags, and injects soft prompts.
+
+    Binary classification (0/1) runs on every message but does NOT block.
+    The verdict is stored in metadata.tags so SpendLogs captures it.
+    The behavioral pipeline later reads these tags as real-time trigger data.
+
+    Risk zone soft prompts (YELLOW/RED) are injected based on the daily
+    behavioral aggregator results stored in UserBehaviorProfile.
+    """
 
     def __init__(
         self,
@@ -25,11 +41,8 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
         policy_prompt: str = POLICY,
         timeout_s: float = 10.0,
         fail_open: bool = True,
-        classify_last_user_only: bool = True,
-        block_status_code: int = 400,
-        block_message: str = "Guardrail blocked: unsafe user input (binary classifier=1)",
         only_paths=("/v1/chat/completions",),
-        only_methods=("POST",)
+        only_methods=("POST",),
     ):
         super().__init__(app)
         self.judge_model = judge_model
@@ -38,21 +51,13 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
         self.policy_prompt = (policy_prompt or "").strip()
         self.timeout_s = float(timeout_s)
         self.fail_open = bool(fail_open)
-        self.classify_last_user_only = bool(classify_last_user_only)
-        self.block_status_code = int(block_status_code)
-        self.block_message = block_message
         self.only_paths = set(only_paths or [])
         self.only_methods = set(m.upper() for m in (only_methods or ()))
-
-        if not self.policy_prompt:
-            raise ValueError("policy_prompt is empty.")
-        if not self.judge_api_key:
-            raise ValueError("judge_api_key is required (pass it or set JUDGE_API_KEY env var).")
 
     async def dispatch(self, request: Request, call_next) -> Response:
         path = request.url.path
         method = request.method.upper()
-        # Фильтр: обрабатываем только POST /v1/chat/completions
+
         if (self.only_methods and method not in self.only_methods) or (
                 self.only_paths and path not in self.only_paths
         ):
@@ -67,24 +72,24 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
         except (json.JSONDecodeError, UnicodeDecodeError):
             return await call_next(request)
 
-        # Бинарная классификация: 0=safe, 1=unsafe
+        # 1. Бинарная классификация — результат в tags, НЕ блокирует
         user_text = self._extract_user_text(payload)
         verdict = await self._classify_binary(user_text)
-        request.state.safety_verdict = verdict
 
         # Записываем вердикт и session_id в metadata для SpendLogs
-        metadata = {"tags": [f"safety_verdict:{verdict}"]}
+        metadata = payload.get('metadata', {})
+        metadata["tags"] = metadata.get("tags", []) + [f"safety_verdict:{verdict}"]
         session_id = request.headers.get('x-openwebui-chat-id')
         if session_id:
             metadata["session_id"] = session_id
         payload['metadata'] = metadata
 
-        # Пробрасываем end_user в payload, чтобы LiteLLM сохранил его в SpendLogs
+        # 2. Пробрасываем end_user в payload
         end_user = payload.get("user") or request.headers.get("x-openwebui-user-id")
         if end_user:
             payload["user"] = end_user
 
-        # Мягкий middleware: если зона YELLOW/RED — добавляем системный промпт
+        # 3. Мягкий middleware: если зона YELLOW/RED — добавляем системный промпт
         if end_user:
             try:
                 repo = BehavioralRepository()
@@ -94,7 +99,7 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
                         payload.get("messages", []), risk_zone
                     )
             except Exception:
-                pass  # fail open
+                pass  # fail open — не блокируем запросы при ошибках БД
 
         # Возвращаем модифицированный body обратно в запрос
         async def receive():
@@ -106,35 +111,30 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
     def _extract_user_text(self, request_data: Dict[str, Any]) -> str:
-        """Extract last user message text for classification."""
+        """Извлекает последнее сообщение пользователя для классификации."""
         messages = request_data.get("messages") or []
         user_msgs: List[str] = [
             str(m.get("content", ""))
             for m in messages
             if isinstance(m, dict) and m.get("role") == "user"
         ]
-        if user_msgs:
-            return user_msgs[-1] if self.classify_last_user_only else "\n\n".join(user_msgs)
-        return ""
+        return user_msgs[-1] if user_msgs else ""
 
     async def _classify_binary(self, user_text: str) -> str:
-        """
-        Делает chat completion на judge-модели. Ожидаем ровно '0' или '1'.
-        """
-        msgs = [
-            {"role": "system", "content": self.policy_prompt},
-            {"role": "user", "content": user_text},
-        ]
-
-        kwargs = {
-            "model": self.judge_model,
-            "messages": msgs,
-            "temperature": 0,
-            "base_url": self.judge_api_base,
-            "api_key": self.judge_api_key,
-        }
-
-        result = await input_classification(timeout=self.timeout_s, **kwargs)
+        """Бинарный классификатор: 0=safe, 1=unsafe. Не блокирует, только тегирует."""
+        if not user_text:
+            return "0"
+        result = await input_classification(
+            timeout=self.timeout_s,
+            model=self.judge_model,
+            messages=[
+                {"role": "system", "content": self.policy_prompt},
+                {"role": "user", "content": user_text},
+            ],
+            temperature=0,
+            base_url=self.judge_api_base,
+            api_key=self.judge_api_key,
+        )
         return result
 
 
@@ -170,4 +170,3 @@ def _inject_risk_zone_prompt(messages: list, risk_zone: str | None) -> list:
     if not template:
         return messages
     return [{"role": "system", "content": template}] + messages
-

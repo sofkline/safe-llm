@@ -39,6 +39,11 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
     temporal_metrics = await compute_temporal_metrics(end_user_id)
     logger.info("Stage 1 complete for %s", end_user_id)
 
+    # Если пользователь не писал сегодня — пропускаем, зона риска остаётся прежней
+    if temporal_metrics.get("daily_message_count", 0) == 0:
+        logger.info("No messages today for %s, skipping aggregation (zone preserved)", end_user_id)
+        return
+
     # Базовые линии: скользящее среднее за 7 дней для обнаружения трендов
     recent_history = await repo.get_recent_metrics(end_user_id, days=7)
     past_temporal = [h.temporal_metrics for h in recent_history if h.temporal_metrics]

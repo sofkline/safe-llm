@@ -96,7 +96,7 @@ class TestAggregatorPipeline:
             patch("behavioral.aggregator.compute_behavioral_scores_and_summary") as mock_s3,
             patch("behavioral.aggregator.evaluate_risk_zone") as mock_s4,
         ):
-            mock_s1.return_value = {"daily_message_count": 0}
+            mock_s1.return_value = {"daily_message_count": 5}
             mock_s2.return_value = {"self_harm_avg": 0.0}
             mock_s3.return_value = {
                 "scores": {"topic_concentration": 0.0},
@@ -132,7 +132,7 @@ class TestAggregatorPipeline:
 
         with (
             patch("behavioral.aggregator.BehavioralRepository", return_value=mock_repo),
-            patch("behavioral.aggregator.compute_temporal_metrics", return_value={}),
+            patch("behavioral.aggregator.compute_temporal_metrics", return_value={"daily_message_count": 5}),
             patch("behavioral.aggregator.compute_danger_class_agg", return_value={}),
             patch("behavioral.aggregator.compute_behavioral_scores_and_summary", return_value={
                 "scores": {},
@@ -157,7 +157,7 @@ class TestAggregatorPipeline:
 
         with (
             patch("behavioral.aggregator.BehavioralRepository", return_value=mock_repo),
-            patch("behavioral.aggregator.compute_temporal_metrics", return_value={}),
+            patch("behavioral.aggregator.compute_temporal_metrics", return_value={"daily_message_count": 5}),
             patch("behavioral.aggregator.compute_danger_class_agg", return_value={}),
             patch("behavioral.aggregator.compute_behavioral_scores_and_summary", return_value={
                 "scores": {},
@@ -182,7 +182,7 @@ class TestAggregatorPipeline:
 
         with (
             patch("behavioral.aggregator.BehavioralRepository", return_value=mock_repo),
-            patch("behavioral.aggregator.compute_temporal_metrics", return_value={}),
+            patch("behavioral.aggregator.compute_temporal_metrics", return_value={"daily_message_count": 5}),
             patch("behavioral.aggregator.compute_danger_class_agg", return_value={}),
             patch("behavioral.aggregator.compute_behavioral_scores_and_summary", return_value={
                 "scores": {},

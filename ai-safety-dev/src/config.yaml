@@ -51,15 +51,7 @@ model_list:
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   store_model_in_db: true
-  guardrail_name_config_map:
-    binary_safety_guardrail: binary-safety-classifier
 
 litellm_settings:
   callbacks: ["langfuse"]
   turn_off_message_logging: false
-  guardrails:
-    - guardrail_name: "binary-safety-classifier"
-      litellm_params:
-        guardrail: "custom_guardrails.BinaryUserSafetyGuardrail"
-        mode: "pre_call"
-        default_on: true
