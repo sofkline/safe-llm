@@ -155,6 +155,75 @@ if temporal_metrics.get("daily_message_count", 0) == 0:
 
 ---
 
+## Gap Analysis: 5 Post-Review Improvements
+
+Проанализировали что система пропускает по сравнению с исходным research doc и README:
+
+**Исправлено (5 задач):**
+
+1. **Валидация soft промптов** — создан скрипт `experiments/test_soft_prompt_effectiveness.py`. Отправляет одно и то же сообщение 3 раза: без промпта (GREEN), с YELLOW промптом, с RED промптом. Сравнивает длину ответов, наличие ключевых слов ("breaks", "professional help"). Без этого эксперимента нельзя доказать что middleware работает.
+
+2. **Langfuse score integration** — создан `behavioral/langfuse_scores.py`. Записывает risk_zone + 4 behavioral scores + max_danger_class_avg на последний трейс пользователя в Langfuse. Супервизор теперь может видеть зоны риска прямо в Langfuse dashboard.
+
+3. **Human-readable trigger explanations** — добавлена функция `_explain_trigger()` в `weekly_report.py`. Вместо `"night_messages > 24"` теперь: `"User sent 37 messages between 22:00-03:00 (baseline: 5)"`. 13 правил имеют объяснения с актуальными значениями.
+
+4. **Удалена метрика `messages_last_1h`** — вычислялась в Stage 1, но ни одно правило Risk Engine её не использовало. Теперь 6 метрик вместо 7.
+
+5. **Добавлено правило `delusion_flag_rate`** — sustained `delusion_flag_rate > 0.2` за 3+ дня = YELLOW триггер. 3 новых теста.
+
+---
+
+## Research Doc vs Implementation: Divergences
+
+Сравнение исходного research document (`behavioral-monitoring/litellm-behavioral-monitoring-research.md`) и README с фактически построенной системой:
+
+**Ключевые расхождения (осознанные решения):**
+
+| Исходный план | Что построили | Почему |
+|--------------|--------------|--------|
+| Real-time мониторинг (каждые 5 мин) | Daily batch (раз в сутки) | Поведенческие паттерны — дневные феномены |
+| Hard limits (автоматическое завершение сессии) | Soft prompts only | ~50% пользователей игнорируют hard limits (источник [9]) |
+| ML модели для предсказания зависимости | Rule-based + LLM scoring | Проще объяснить и валидировать в дипломе |
+| CustomLogger callback | Читаем SpendLogs напрямую | LiteLLM уже логирует всё сам |
+| CustomGuardrail (нативный LiteLLM) | Starlette middleware | Один middleware делает и классификацию и soft prompts |
+| LLM-D12 шкала (instrumental/relational) | 4 behavioral scores | delegation ~ instrumental, attachment ~ relational |
+| Prisma ORM | SQLAlchemy (runtime) + Prisma (migrations only) | Mikhail's codebase уже на SQLAlchemy |
+| GREEN/YELLOW/ORANGE/RED | GREEN/YELLOW/RED | ORANGE не добавлял actionable различия |
+| Adaptive thresholds | Фиксированные пороги | Достаточно для дипломной валидации |
+| Real-time dashboard | Еженедельный отчёт | Проще и достаточно для scope дипломной |
+
+**DailySummary — самое большое дополнение**, не запланированное в исходном research doc. Появилось из брейншторма: "хочу видеть логи каждого пользователя и тренд коммуникации".
+
+---
+
+## Architecture: Two Schedulers
+
+Два планировщика работают последовательно:
+
+| | `scheduler.py` (Mikhail) | `behavioral/scheduler.py` (наш) |
+|---|---|---|
+| Частота | Каждый час (или 5с в dev) | Раз в сутки 00:30 UTC (или 30с в dev) |
+| Что делает | Langfuse -> classify -> PredictTable | SpendLogs + PredictTable -> MetricsHistory + DailySummary |
+| Зависимость | Нет | Зависит от данных в PredictTable |
+
+Mikhail's скрапер заполняет PredictTable ежечасно. Наш агрегатор запускается в 00:30 — к этому моменту все часовые данные уже есть.
+
+**Prisma vs SQLAlchemy:** Prisma используется только для DDL (миграции, `prisma generate`). Весь runtime код — SQLAlchemy async. `prisma generate` нужен перед первым запуском.
+
+---
+
+## Known Gap: PredictTable for Synthetic Experiments
+
+**Проблема:** Синтетические диалоги записываются в SpendLogs, но PredictTable (5-классовая классификация) заполняется через Langfuse scraper. Синтетические данные не проходят через Langfuse.
+
+**Решение (TODO):**
+- **Option A:** Отдельный скрипт `classify_synthetic_data.py` — читает SpendLogs для `synth_*` пользователей и запускает `daily_classification` -> PredictTable
+- **Option B:** Детерминированные значения в `predict_overrides` каждого DayScript + флаг `--option-b` в runner
+
+Решение пока не принято.
+
+---
+
 ## Code Cleanup
 
 - Удалён `MULTI_LABEL_POLICY_PROMPT_SYCOPHANCY` (120 строк мёртвого кода, несовместим со схемой)
@@ -175,6 +244,16 @@ if temporal_metrics.get("daily_message_count", 0) == 0:
 
 ---
 
+## Next Steps
+
+1. Решить Option A vs B для PredictTable синтетических данных
+2. Запустить первый эксперимент (Sara — control, простейший случай)
+3. Запустить Experiment 2 (boundary tests — без LLM, детерминированные)
+4. Запустить Experiment 3 (middleware — без LLM)
+5. Затем полная валидация по всем 11 персонам
+
+---
+
 ## Commits
 
 ```
@@ -185,4 +264,5 @@ fdf7056 fix: enable message logging in SpendLogs + set end_user
 e2c2320 feat: add eRisk correlation analysis script
 c7012d4 feat: add synthetic dialogue generation module with 11 personas
 696256b docs: add experiment run guide with 5 experiments
+68fe21e refactor: guardrails architecture + silent days + session results
 ```
