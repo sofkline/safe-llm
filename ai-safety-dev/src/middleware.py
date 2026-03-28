@@ -87,8 +87,12 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
             metadata["session_id"] = session_id
         payload['metadata'] = metadata
 
-        # Soft middleware: inject risk zone prompt
+        # Ensure end_user is set in payload so LiteLLM stores it in SpendLogs
         end_user = payload.get("user") or request.headers.get("x-openwebui-user-id")
+        if end_user:
+            payload["user"] = end_user
+
+        # Soft middleware: inject risk zone prompt
         if end_user:
             try:
                 repo = BehavioralRepository()
