@@ -1,3 +1,5 @@
+# Скрапер: читает трейсы из Langfuse, классифицирует (5 классов), записывает в PredictTable
+# Запускается планировщиком каждый час (или каждые 5с в dev mode)
 import json
 import logging
 from datetime import datetime, timedelta, timezone
@@ -72,10 +74,12 @@ def _extract_messages(trace) -> list[dict]:
 
 
 async def scrape_sessions_for_previous_hour() -> None:
+    """Основная функция скрапера: Langfuse -> classify -> PredictTable."""
     start, end = _last_hour_window()
     predict_repository = PredictRepository()
     langfuse = _get_langfuse_client()
 
+    # Шаг 1: забираем все трейсы за последний час из Langfuse
     try:
         traces_response = langfuse.fetch_traces(
             from_timestamp=start,
@@ -86,7 +90,7 @@ async def scrape_sessions_for_previous_hour() -> None:
         logger.exception("Failed to fetch traces from Langfuse")
         return
 
-    # Group traces by session_id
+    # Шаг 2: группируем трейсы по session_id
     session_traces: dict[str, list] = {}
     for trace in traces:
         session_id = _extract_session_id(trace)
@@ -95,9 +99,9 @@ async def scrape_sessions_for_previous_hour() -> None:
 
     logger.info("Langfuse scraper: found %d sessions from %d traces", len(session_traces), len(traces))
 
+    # Шаг 3: для каждой сессии — классифицируем и сохраняем в PredictTable
     for session_id, session_trace_list in session_traces.items():
         try:
-            # Sort by timestamp, take the last trace
             sorted_traces = sorted(
                 session_trace_list,
                 key=lambda t: getattr(t, "timestamp", datetime.min.replace(tzinfo=timezone.utc)),
@@ -116,6 +120,7 @@ async def scrape_sessions_for_previous_hour() -> None:
 
             trace_id = getattr(last_trace, "id", None) or ""
 
+            # Пропускаем, если эту сессию уже классифицировали
             cur_predict = await predict_repository.get_by_session_id(session_id)
             if cur_predict is None or cur_predict.last_trace_id != trace_id:
                 conversation = "\n\n".join(
@@ -123,6 +128,7 @@ async def scrape_sessions_for_previous_hour() -> None:
                     for msg in messages
                     if isinstance(msg, dict) and "role" in msg and "content" in msg
                 )
+                # 5-классовая классификация через LLM
                 llm_classify_model = await daily_classification(conversation=conversation)
 
                 predict = LiteLLM_PredictTable(

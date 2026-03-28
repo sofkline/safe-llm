@@ -1,4 +1,5 @@
-"""Stage 4: Rule-based risk zone engine."""
+"""Этап 4: Правила определения зоны риска (GREEN/YELLOW/RED).
+Любой 1 RED-триггер = RED, любые 2 YELLOW-триггера = YELLOW, иначе GREEN."""
 
 import logging
 

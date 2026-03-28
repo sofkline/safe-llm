@@ -1,4 +1,5 @@
-"""Daily APScheduler job for behavioral aggregation."""
+"""Планировщик: запускает агрегатор для всех активных пользователей.
+Prod: ежедневно в 00:30 UTC. Dev: каждые 30 секунд."""
 
 import logging
 from datetime import datetime, timedelta, timezone, UTC

@@ -1,4 +1,4 @@
-"""Weekly report generator — assembles per-user reports from DB data."""
+"""Генератор еженедельного отчёта: собирает MetricsHistory + DailySummary + Events за неделю."""
 
 import logging
 from datetime import date, datetime, timedelta, UTC

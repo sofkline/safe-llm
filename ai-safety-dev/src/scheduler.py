@@ -1,3 +1,4 @@
+# Планировщик скрапера Langfuse: Prod каждый час, Dev каждые 5 секунд
 from datetime import timezone, datetime, UTC, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler

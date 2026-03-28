@@ -1,4 +1,5 @@
-"""Stage 3: Behavioral LLM scores + daily summary."""
+"""Этап 3: LLM-анализ поведения + дневная сводка.
+Отправляет последние сообщения + календарь (notable days) в LLM, получает 4 скора и summary."""
 
 import json
 import logging
@@ -17,7 +18,9 @@ from sqlalchemy import select, and_
 
 logger = logging.getLogger(__name__)
 
+# 4 поведенческих скора: от 0.0 (норма) до 1.0 (тревога)
 SCORE_KEYS = ["topic_concentration", "decision_delegation", "social_isolation", "emotional_attachment"]
+# Поля дневной сводки для DailySummary
 SUMMARY_KEYS = ["key_topics", "life_events", "emotional_tone", "ai_relationship_markers", "notable_quotes", "operator_note"]
 
 

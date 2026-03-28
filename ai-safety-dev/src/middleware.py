@@ -1,3 +1,5 @@
+# Middleware: перехватывает каждый запрос к /v1/chat/completions
+# Две задачи: (1) бинарная классификация 0/1  (2) инъекция промпта для YELLOW/RED зон
 import json
 import os
 from typing import Optional, Dict, Any, List
@@ -12,16 +14,6 @@ from behavioral.repository import BehavioralRepository
 
 
 class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
-    """
-    Pre-call guardrail middleware: прогоняет user input через бинарный классификатор (0/1).
-    Если вернулось '1' => блокирует запрос.
-
-    - Пытается вытащить текст пользователя из JSON body:
-        {"messages":[{"role":"user","content":"..."} ...]}
-      иначе классифицирует сырой body как текст.
-    - Результат кладёт в request.state.safety_verdict и (опционально) добавляет тег в metadata.tags внутри body,
-      если такой объект есть (безопасно: только если body JSON и структура подходит).
-    """
 
     def __init__(
         self,
@@ -60,39 +52,39 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         path = request.url.path
         method = request.method.upper()
-        # пропускаем всё, что не в allowlist
+        # Фильтр: обрабатываем только POST /v1/chat/completions
         if (self.only_methods and method not in self.only_methods) or (
                 self.only_paths and path not in self.only_paths
         ):
             return await call_next(request)
 
-        # читаем body один раз, затем "возвращаем" его downstream
+        # Читаем body один раз, парсим JSON
         receive_ = await request._receive()
         payload_bytes: bytes = receive_.get('body', b'')
 
         try:
             payload = json.loads(payload_bytes.decode('utf-8', errors='ignore'))
         except (json.JSONDecodeError, UnicodeDecodeError):
-            # Can't parse body — pass through without classification
             return await call_next(request)
 
+        # Бинарная классификация: 0=safe, 1=unsafe
         user_text = self._extract_user_text(payload)
-
         verdict = await self._classify_binary(user_text)
         request.state.safety_verdict = verdict
 
+        # Записываем вердикт и session_id в metadata для SpendLogs
         metadata = {"tags": [f"safety_verdict:{verdict}"]}
         session_id = request.headers.get('x-openwebui-chat-id')
         if session_id:
             metadata["session_id"] = session_id
         payload['metadata'] = metadata
 
-        # Ensure end_user is set in payload so LiteLLM stores it in SpendLogs
+        # Пробрасываем end_user в payload, чтобы LiteLLM сохранил его в SpendLogs
         end_user = payload.get("user") or request.headers.get("x-openwebui-user-id")
         if end_user:
             payload["user"] = end_user
 
-        # Soft middleware: inject risk zone prompt
+        # Мягкий middleware: если зона YELLOW/RED — добавляем системный промпт
         if end_user:
             try:
                 repo = BehavioralRepository()
@@ -102,8 +94,9 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
                         payload.get("messages", []), risk_zone
                     )
             except Exception:
-                pass  # fail open — don't block requests on DB errors
+                pass  # fail open
 
+        # Возвращаем модифицированный body обратно в запрос
         async def receive():
             receive_["body"] = json.dumps(payload).encode('utf-8')
             return receive_
@@ -145,7 +138,7 @@ class BinaryUserSafetyGuardrailMiddleware(BaseHTTPMiddleware):
         return result
 
 
-# --- Soft Middleware: Risk Zone Prompt Injection ---
+# --- Мягкий middleware: шаблоны системных промптов для зон YELLOW и RED ---
 
 _YELLOW_PROMPT = """This user may be developing an unhealthy interaction pattern with AI.
 Encourage taking breaks. Suggest offline activities and real-world social

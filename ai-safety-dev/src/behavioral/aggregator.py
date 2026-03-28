@@ -1,4 +1,4 @@
-"""Main aggregator pipeline — runs daily per user, executes Stages 1-4 sequentially."""
+"""Главный конвейер: запускается ежедневно для каждого пользователя, выполняет Этапы 1-4."""
 
 import logging
 from datetime import datetime, date, UTC
@@ -35,11 +35,11 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
 
     logger.info("Aggregator starting for user %s", end_user_id)
 
-    # Stage 1
+    # Этап 1: темпоральные метрики из SpendLogs (кол-во сообщений, ночная активность и т.д.)
     temporal_metrics = await compute_temporal_metrics(end_user_id)
     logger.info("Stage 1 complete for %s", end_user_id)
 
-    # Baselines: 7-day rolling avg from MetricsHistory
+    # Базовые линии: скользящее среднее за 7 дней для обнаружения трендов
     recent_history = await repo.get_recent_metrics(end_user_id, days=7)
     past_temporal = [h.temporal_metrics for h in recent_history if h.temporal_metrics]
     baselines = compute_baselines(past_temporal)
@@ -47,17 +47,17 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
     if trend_flags:
         logger.info("Trend flags for %s: %s", end_user_id, trend_flags)
 
-    # Stage 2
+    # Этап 2: агрегация классов опасности из PredictTable (self_harm, psychosis и др.)
     danger_class_agg = await compute_danger_class_agg(end_user_id)
     logger.info("Stage 2 complete for %s", end_user_id)
 
-    # Stage 3
+    # Этап 3: LLM-анализ поведения + дневная сводка + календарь
     stage3_result = await compute_behavioral_scores_and_summary(end_user_id, today)
     behavioral_scores = stage3_result["scores"]
     summary_data = stage3_result["summary"]
     logger.info("Stage 3 complete for %s", end_user_id)
 
-    # Stage 4
+    # Этап 4: правила определения зоны GREEN/YELLOW/RED
     risk_zone, triggered_rules = await evaluate_risk_zone(
         temporal_metrics, danger_class_agg, behavioral_scores,
         baselines=baselines,
@@ -65,9 +65,9 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
     )
     logger.info("Stage 4 complete for %s: zone=%s, triggers=%s", end_user_id, risk_zone, triggered_rules)
 
-    # --- Post-stage writes ---
+    # --- Запись результатов в БД ---
 
-    # 1. Write MetricsHistory
+    # 1. MetricsHistory — ежедневный снимок всех метрик
     metrics_entry = MetricsHistory(
         end_user_id=end_user_id,
         computed_at=now,
@@ -79,7 +79,7 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
     )
     await repo.add_metrics_history(metrics_entry)
 
-    # 2. Write DailySummary
+    # 2. DailySummary — темы дня, события, цитаты, маркеры отношений с AI
     is_notable = _compute_is_notable(summary_data, behavioral_scores)
     daily_summary = DailySummary(
         end_user_id=end_user_id,
@@ -94,7 +94,7 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
     )
     await repo.add_daily_summary(daily_summary)
 
-    # 3. Update UserBehaviorProfile
+    # 3. UserBehaviorProfile — текущее состояние пользователя (upsert)
     old_profile = await repo.get_profile(end_user_id)
     old_zone = old_profile.risk_zone if old_profile else "GREEN"
 
@@ -110,7 +110,7 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
     )
     await repo.upsert_profile(profile)
 
-    # 4. Write BehavioralEvent if zone changed or RED
+    # 4. BehavioralEvent — фиксируем переходы зон и RED-алерты
     if risk_zone != old_zone or risk_zone == "RED":
         event = BehavioralEvent(
             end_user_id=end_user_id,
@@ -126,7 +126,7 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
         await repo.add_event(event)
         logger.info("Zone change event: %s -> %s for %s", old_zone, risk_zone, end_user_id)
 
-    # 5. Write scores to Langfuse (best-effort)
+    # 5. Дублируем скоры в Langfuse для дашборда (best-effort, не блокирует)
     from behavioral.langfuse_scores import write_behavioral_scores_to_langfuse
     await write_behavioral_scores_to_langfuse(
         end_user_id, risk_zone, behavioral_scores, danger_class_agg

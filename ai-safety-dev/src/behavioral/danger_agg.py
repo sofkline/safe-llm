@@ -1,4 +1,4 @@
-"""Stage 2: Danger class aggregation from PredictTable."""
+"""Этап 2: Агрегация классов опасности из PredictTable (чистый SQL, без LLM)."""
 
 import logging
 from datetime import datetime, timedelta, UTC
@@ -10,6 +10,7 @@ from database.models import LiteLLM_PredictTable
 
 logger = logging.getLogger(__name__)
 
+# 5 классов опасности из мультиклассового классификатора
 DANGER_CLASSES = ["self_harm", "psychosis", "delusion", "obsession", "anthropomorphism"]
 
 

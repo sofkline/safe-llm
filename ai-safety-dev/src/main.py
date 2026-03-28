@@ -1,3 +1,4 @@
+# Точка входа: оборачивает LiteLLM Proxy, добавляет middleware и планировщики
 import os
 from contextlib import asynccontextmanager
 
@@ -14,6 +15,7 @@ from behavioral.scheduler import start_behavioral_scheduler
 
 litellm_app = app
 
+# Starlette middleware: бинарная классификация + инъекция мягких промптов по зоне риска
 litellm_app.add_middleware(
     BinaryUserSafetyGuardrailMiddleware,
     judge_model=settings.JUDGE_MODEL,
@@ -25,14 +27,15 @@ litellm_app.add_middleware(
     classify_last_user_only=True,
 )
 
+# Подменяем lifespan LiteLLM, чтобы запустить свои фоновые задачи
 old = app.router.lifespan_context
 
 
 @asynccontextmanager
 async def wrapped_lifespan(app_):
-    await create_all_schemas()  # must run before scheduler — it queries PredictTable
-    scheduler = await start_langfuse_scheduler()
-    behavioral_scheduler = await start_behavioral_scheduler()
+    await create_all_schemas()  # создание таблиц, должно быть до планировщиков
+    scheduler = await start_langfuse_scheduler()           # скрапер Langfuse (каждый час)
+    behavioral_scheduler = await start_behavioral_scheduler()  # агрегатор (ежедневно 00:30)
     try:
         async with old(app_) as _:
             yield

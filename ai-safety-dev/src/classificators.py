@@ -1,3 +1,4 @@
+# Два классификатора: бинарный (0/1, real-time) и мультиклассовый (5 классов, ежечасно)
 import asyncio
 from typing import Any
 
@@ -8,6 +9,7 @@ from prompts import MULTI_LABEL_POLICY_PROMPT
 from schemas import SafetyMultilabelSchema
 
 
+# Бинарный классификатор: вызывается middleware на каждый запрос
 async def input_classification(
     *,
     timeout: float = 10.0,
@@ -28,6 +30,8 @@ async def input_classification(
         raise
 
 
+# Мультиклассовый: obsession, self_harm, psychosis, delusion, anthropomorphism
+# Вызывается скрапером для каждой сессии, результат -> PredictTable
 async def daily_classification(
     conversation: str
 ) -> SafetyMultilabelSchema:

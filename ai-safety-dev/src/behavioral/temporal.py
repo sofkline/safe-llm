@@ -1,4 +1,4 @@
-"""Stage 1: Temporal metrics from SpendLogs."""
+"""Этап 1: Темпоральные метрики из SpendLogs (чистый SQL, без LLM)."""
 
 import logging
 from datetime import datetime, timedelta, UTC
@@ -10,6 +10,7 @@ from database.models import LiteLLM_SpendLogs
 
 logger = logging.getLogger(__name__)
 
+# Ночные часы: 01:00-05:59 UTC
 NIGHT_HOURS = {1, 2, 3, 4, 5}
 
 
