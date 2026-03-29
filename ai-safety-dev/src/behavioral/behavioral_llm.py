@@ -9,12 +9,8 @@ from datetime import date, datetime, timedelta, UTC
 import litellm
 
 from config import settings
-from database import Session
-from database.models import LiteLLM_SpendLogs
 from behavioral.repository import BehavioralRepository
 from behavioral.temporal import _extract_last_user_message
-
-from sqlalchemy import select, and_
 
 logger = logging.getLogger(__name__)
 
@@ -133,31 +129,16 @@ def _parse_llm_response(raw: str) -> dict | None:
 
 
 async def _fetch_recent_user_messages(end_user_id: str, limit: int = 20) -> list[str]:
-    """Fetch the last N user messages from SpendLogs (AI responses stripped)."""
-    from behavioral.temporal import _get_messages_from_row
-    # naive datetime: SpendLogs.startTime is TIMESTAMP WITHOUT TIME ZONE
+    """Fetch the last N user messages (через SpendLogs с fallback на Langfuse)."""
+    from behavioral.temporal import _fetch_spendlogs_rows
     since = datetime.utcnow() - timedelta(days=7)
-    async with Session() as session:
-        query = (
-            select(
-                LiteLLM_SpendLogs.messages,
-                LiteLLM_SpendLogs.proxy_server_request,
-            )
-            .where(
-                and_(
-                    LiteLLM_SpendLogs.end_user == end_user_id,
-                    LiteLLM_SpendLogs.startTime >= since,
-                )
-            )
-            .order_by(LiteLLM_SpendLogs.startTime.desc())
-            .limit(limit)
-        )
-        result = await session.execute(query)
-        rows = result.all()
+    rows = await _fetch_spendlogs_rows(end_user_id, since)
+
+    # Берём последние limit строк (rows уже отсортированы по времени asc)
+    recent_rows = rows[-limit:] if len(rows) > limit else rows
 
     messages = []
-    for row in reversed(rows):
-        messages_json = _get_messages_from_row(row[0], row[1])
+    for _, messages_json in recent_rows:
         msg = _extract_last_user_message(messages_json)
         if msg:
             messages.append(msg)

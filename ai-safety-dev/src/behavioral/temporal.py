@@ -1,10 +1,11 @@
-"""Этап 1: Темпоральные метрики из SpendLogs (чистый SQL, без LLM)."""
+"""Этап 1: Темпоральные метрики из SpendLogs + Langfuse (чистый SQL, без LLM)."""
 
 import logging
 from datetime import datetime, timedelta, UTC
 
 from sqlalchemy import select, and_
 
+from config import settings
 from database import Session
 from database.models import LiteLLM_SpendLogs
 
@@ -42,10 +43,45 @@ def _get_messages_from_row(messages_json, proxy_request_json) -> list:
     return []
 
 
+def _fetch_langfuse_traces(end_user_id: str, since: datetime) -> list[tuple[datetime, list]]:
+    """Получить (timestamp, messages) из Langfuse для пользователя.
+    Используется когда SpendLogs не содержит messages."""
+    try:
+        from langfuse import Langfuse
+        langfuse = Langfuse(
+            public_key=settings.LANGFUSE_PUBLIC_KEY,
+            secret_key=settings.LANGFUSE_SECRET_KEY,
+            host=settings.LANGFUSE_API_HOST,
+        )
+        traces_response = langfuse.fetch_traces(
+            user_id=end_user_id,
+            from_timestamp=since,
+        )
+        traces = traces_response.data if traces_response.data else []
+
+        rows = []
+        for trace in traces:
+            ts = getattr(trace, "timestamp", None)
+            if not ts:
+                continue
+            # Langfuse trace.input содержит messages
+            trace_input = getattr(trace, "input", None) or []
+            if isinstance(trace_input, list) and trace_input:
+                rows.append((ts.replace(tzinfo=None), trace_input))
+
+        rows.sort(key=lambda r: r[0])
+        langfuse.flush()
+        return rows
+    except Exception:
+        logger.exception("Failed to fetch traces from Langfuse for %s", end_user_id)
+        return []
+
+
 async def _fetch_spendlogs_rows(
     end_user_id: str, since: datetime
 ) -> list[tuple[datetime, list]]:
-    """Fetch (startTime, messages) pairs from SpendLogs for a user since a cutoff."""
+    """Fetch (startTime, messages) из SpendLogs, с fallback на Langfuse."""
+    # Сначала пробуем SpendLogs
     async with Session() as session:
         query = (
             select(
@@ -62,10 +98,29 @@ async def _fetch_spendlogs_rows(
             .order_by(LiteLLM_SpendLogs.startTime.asc())
         )
         result = await session.execute(query)
-        return [
+        rows = [
             (row[0], _get_messages_from_row(row[1], row[2]))
             for row in result.all()
         ]
+
+    # Проверяем, есть ли messages хотя бы в одной строке
+    has_messages = any(len(msgs) > 0 for _, msgs in rows)
+    if rows and has_messages:
+        return rows
+
+    # Fallback: берём messages из Langfuse
+    if rows and not has_messages:
+        logger.info("SpendLogs has %d rows but no messages for %s, trying Langfuse",
+                     len(rows), end_user_id)
+        langfuse_rows = _fetch_langfuse_traces(end_user_id, since)
+        if langfuse_rows:
+            return langfuse_rows
+        # Если Langfuse тоже пуст, возвращаем SpendLogs (хотя бы timestamps)
+        return rows
+
+    # Нет данных в SpendLogs — пробуем Langfuse напрямую
+    logger.info("No SpendLogs rows for %s, trying Langfuse", end_user_id)
+    return _fetch_langfuse_traces(end_user_id, since)
 
 
 async def compute_temporal_metrics(end_user_id: str) -> dict:
