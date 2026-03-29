@@ -311,7 +311,7 @@ PYTHONPATH=experiments py -m synthetic.runner --persona sara --reaggregate
 После всех фиксов — полный pipeline работает:
 
 ```
-Playground message "умолчу работай"
+Playground message "умоляю работай"
   -> middleware: safety_verdict:0, end_user=default_user
   -> SpendLogs: row created (messages empty, but Langfuse has data)
   -> Aggregator (60s later):

@@ -7,15 +7,14 @@
 | Вопрос | Решение |
 |--------|---------|
 | Что классифицируем? | Ежедневные паттерны (не отдельные сообщения) |
-| Как реагируем? | Soft middleware: инъекция промптов YELLOW/RED, без блокировки |
+| Как реагируем? | Soft middleware: инъекция промптов YELLOW/RED, без блокировки "обратитесь за помощью" |
 | Как часто? | Агрегатор раз в сутки (00:30 UTC), не real-time |
 | Что видит оператор? | Еженедельный отчёт (SQL-статистика + timeline notable days) |
-| LLM backend? | Configurable через BEHAVIORAL_LLM_MODEL (Ollama, OpenRouter, OpenWebUI) |
 
-### Новые компоненты (отличие от v2 roadmap)
+### Новые компоненты
 
 - **DailySummary** -- структурированная дневная сводка (key_topics, life_events, emotional_tone, ai_relationship_markers, notable_quotes, operator_note)
-- **Calendar** -- LLM видит только notable дни при анализе, а не полную историю
+- **Calendar** -- LLM видит только ключевые дни, в которые было что-то выявленно при анализе, а не полную историю
 - **Soft middleware** -- фиксированные промпты YELLOW/RED, middleware расширяет существующий binary classifier
 - **Weekly report** -- программная сборка из MetricsHistory + DailySummary, без LLM
 
@@ -34,15 +33,13 @@
 | 5: Risk Engine | Правила GREEN/YELLOW/RED + soft middleware | behavioral/risk_engine.py, middleware.py |
 | 6: Weekly Report | Отчёт с human-readable триггерами | behavioral/weekly_report.py |
 
-**93 теста, все проходят.**
-
 ---
 
 ## 3. Улучшения после code review
 
 | Улучшение | Зачем |
 |-----------|-------|
-| `delusion_flag_rate > 0.2` sustained 3 days | Новый YELLOW trigger для бредового контента |
+| `delusion_flag_rate > 0.2` sustained 3 days | Новый YELLOW trigger для бредового контента, был пропущен |
 | Удалён `messages_last_1h` | Метрика вычислялась, но ни одно правило не использовало |
 | Human-readable trigger explanations | `"night_messages > 24"` -> `"37 сообщений между 22:00-03:00 (baseline: 5)"` |
 | Langfuse score integration | risk_zone + 4 scores видны в Langfuse dashboard |
@@ -55,7 +52,6 @@
 - `langfuse_scraper.py`: httpx -> Langfuse SDK
 - `middleware.py`: убран dead code, добавлен `/chat/completions` path
 - `prompts.py`: удалён мёртвый SYCOPHANCY prompt (120 строк)
-- Русские `#` комментарии во всех файлах src/
 
 ---
 
@@ -81,15 +77,16 @@
 
 ---
 
-## 6. Debugging на сервере (10 ошибок -> 10 фиксов)
+## 6. Debugging на сервере (файл с багами и решениями)
 
-Подробно: раздел 7 ниже.
-
-**Итог:** полный pipeline работает end-to-end. Playground message -> middleware -> Langfuse fallback -> 4 Stages -> YELLOW -> soft prompt injection -> Langfuse scores.
+**Итог:** на отдельных сообщениях полный пайплан работает end-to-end, трейсы сохраняются в лангфьюз, дата собирается в бд.
+Playground message -> middleware -> Langfuse fallback -> 4 Stages -> YELLOW -> soft prompt injection -> Langfuse scores.
 
 ---
 
 ## 7. Next Steps
+
+Проработать тесты на синтетических персонах, чтобы определить корректность метрик и промптов + отловить баги на лонгитьюдное взаимодействие 
 
 1. Запустить Sara (контроль) -- должна быть GREEN все 14 дней
 2. Запустить Viktor, Amanda -- проверить zone transitions
