@@ -41,7 +41,7 @@ class BehavioralSafetyMiddleware(BaseHTTPMiddleware):
         policy_prompt: str = POLICY,
         timeout_s: float = 10.0,
         fail_open: bool = True,
-        only_paths=("/v1/chat/completions",),
+        only_paths=("/v1/chat/completions", "/chat/completions"),
         only_methods=("POST",),
     ):
         super().__init__(app)
