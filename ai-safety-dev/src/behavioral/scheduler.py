@@ -36,6 +36,7 @@ async def _get_active_user_ids() -> list[str]:
 async def _run_daily_aggregation():
     """Run aggregator for all active users."""
     user_ids = await _get_active_user_ids()
+    user_ids = [uid for uid in user_ids if uid and uid.strip()]
     logger.info("Daily behavioral aggregation: processing %d users", len(user_ids))
     for user_id in user_ids:
         try:

@@ -190,13 +190,15 @@ async def compute_behavioral_scores_and_summary(
     # 3. Build prompt
     prompt = _build_prompt(today, messages, calendar_section)
 
-    # 4. Call LLM
+    # 4. Вызов LLM (credentials берём из config)
     try:
         response = await litellm.acompletion(
             model=settings.BEHAVIORAL_LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1,
             timeout=60,
+            api_key=settings.API_KEY,
+            base_url=settings.API_BASE_URL,
         )
         raw_content = response.choices[0].message.content
     except Exception:
