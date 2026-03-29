@@ -85,9 +85,13 @@ class BehavioralSafetyMiddleware(BaseHTTPMiddleware):
         payload['metadata'] = metadata
 
         # 2. Пробрасываем end_user в payload
-        end_user = payload.get("user") or request.headers.get("x-openwebui-user-id")
-        if end_user:
-            payload["user"] = end_user
+        # Определяем user: из body, из заголовка OpenWebUI, или default
+        end_user = (
+            payload.get("user")
+            or request.headers.get("x-openwebui-user-id")
+            or "default_user"
+        )
+        payload["user"] = end_user
 
         # 3. Мягкий middleware: если зона YELLOW/RED — добавляем системный промпт
         if end_user:
