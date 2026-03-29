@@ -51,6 +51,8 @@ model_list:
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   store_model_in_db: true
+  disable_spend_logs: false
+  turn_off_message_logging: false
 
 litellm_settings:
   callbacks: ["langfuse"]
