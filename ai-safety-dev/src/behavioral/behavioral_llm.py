@@ -134,11 +134,15 @@ def _parse_llm_response(raw: str) -> dict | None:
 
 async def _fetch_recent_user_messages(end_user_id: str, limit: int = 20) -> list[str]:
     """Fetch the last N user messages from SpendLogs (AI responses stripped)."""
+    from behavioral.temporal import _get_messages_from_row
     # naive datetime: SpendLogs.startTime is TIMESTAMP WITHOUT TIME ZONE
     since = datetime.utcnow() - timedelta(days=7)
     async with Session() as session:
         query = (
-            select(LiteLLM_SpendLogs.messages)
+            select(
+                LiteLLM_SpendLogs.messages,
+                LiteLLM_SpendLogs.proxy_server_request,
+            )
             .where(
                 and_(
                     LiteLLM_SpendLogs.end_user == end_user_id,
@@ -152,7 +156,8 @@ async def _fetch_recent_user_messages(end_user_id: str, limit: int = 20) -> list
         rows = result.all()
 
     messages = []
-    for (messages_json,) in reversed(rows):
+    for row in reversed(rows):
+        messages_json = _get_messages_from_row(row[0], row[1])
         msg = _extract_last_user_message(messages_json)
         if msg:
             messages.append(msg)

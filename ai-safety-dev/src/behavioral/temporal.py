@@ -28,6 +28,20 @@ def _extract_last_user_message(messages) -> str | None:
     return None
 
 
+def _get_messages_from_row(messages_json, proxy_request_json) -> list:
+    """Извлечь messages: сначала из messages, затем из proxy_server_request.
+    LiteLLM v1.81.8+ хранит сообщения в proxy_server_request, а не в messages."""
+    if messages_json and isinstance(messages_json, list) and len(messages_json) > 0:
+        return messages_json
+    if messages_json and isinstance(messages_json, dict) and messages_json.get("messages"):
+        return messages_json["messages"]
+    if proxy_request_json and isinstance(proxy_request_json, dict):
+        msgs = proxy_request_json.get("messages")
+        if msgs and isinstance(msgs, list):
+            return msgs
+    return []
+
+
 async def _fetch_spendlogs_rows(
     end_user_id: str, since: datetime
 ) -> list[tuple[datetime, list]]:
@@ -37,6 +51,7 @@ async def _fetch_spendlogs_rows(
             select(
                 LiteLLM_SpendLogs.startTime,
                 LiteLLM_SpendLogs.messages,
+                LiteLLM_SpendLogs.proxy_server_request,
             )
             .where(
                 and_(
@@ -47,7 +62,10 @@ async def _fetch_spendlogs_rows(
             .order_by(LiteLLM_SpendLogs.startTime.asc())
         )
         result = await session.execute(query)
-        return [(row[0], row[1]) for row in result.all()]
+        return [
+            (row[0], _get_messages_from_row(row[1], row[2]))
+            for row in result.all()
+        ]
 
 
 async def compute_temporal_metrics(end_user_id: str) -> dict:
