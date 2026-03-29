@@ -55,7 +55,8 @@ async def compute_temporal_metrics(end_user_id: str) -> dict:
 
     Returns a dict with all Stage 1 metric fields.
     """
-    now = datetime.now(UTC)
+    # naive datetime: SpendLogs.startTime is TIMESTAMP WITHOUT TIME ZONE
+    now = datetime.utcnow()
     since_24h = now - timedelta(hours=24)
 
     rows = await _fetch_spendlogs_rows(end_user_id, since_24h)

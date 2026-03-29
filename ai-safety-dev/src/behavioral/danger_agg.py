@@ -95,7 +95,8 @@ async def compute_danger_class_agg(end_user_id: str) -> dict:
 
     Returns danger_class_agg JSON with all Stage 2 metrics.
     """
-    now = datetime.now(UTC)
+    # naive datetime: PredictTable.created_at is TIMESTAMP WITHOUT TIME ZONE
+    now = datetime.utcnow()
     since_24h = now - timedelta(hours=24)
 
     raw_rows = await _fetch_predict_rows(end_user_id, since_24h)

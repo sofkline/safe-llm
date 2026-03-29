@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 async def _get_active_user_ids() -> list[str]:
     """Fetch distinct end_user IDs from SpendLogs active in last 48h."""
-    cutoff = datetime.now(UTC) - timedelta(hours=48)
+    # naive datetime: SpendLogs.startTime is TIMESTAMP WITHOUT TIME ZONE
+    cutoff = datetime.utcnow() - timedelta(hours=48)
     async with Session() as session:
         query = select(distinct(LiteLLM_SpendLogs.end_user)).where(
             and_(

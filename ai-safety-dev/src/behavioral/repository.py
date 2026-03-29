@@ -50,7 +50,8 @@ class BehavioralRepository:
         self, end_user_id: str, days: int = 7
     ) -> list[MetricsHistory]:
         async with self._session_factory() as session:
-            cutoff = datetime.now(UTC).replace(
+            # naive datetime: MetricsHistory.computed_at is TIMESTAMP WITHOUT TIME ZONE
+            cutoff = datetime.utcnow().replace(
                 hour=0, minute=0, second=0, microsecond=0
             )
             cutoff = cutoff - timedelta(days=days)
@@ -104,7 +105,7 @@ class BehavioralRepository:
         self, end_user_id: str, days: int = 7
     ) -> list[BehavioralEvent]:
         async with self._session_factory() as session:
-            cutoff = datetime.now(UTC) - timedelta(days=days)
+            cutoff = datetime.utcnow() - timedelta(days=days)
             query = (
                 select(BehavioralEvent)
                 .where(

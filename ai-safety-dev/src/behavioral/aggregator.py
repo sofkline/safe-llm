@@ -30,7 +30,7 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
     and optionally write BehavioralEvent if zone changed.
     """
     repo = BehavioralRepository()
-    now = datetime.now(UTC)
+    now = datetime.utcnow()
     today = now.date()
 
     logger.info("Aggregator starting for user %s", end_user_id)

@@ -134,7 +134,8 @@ def _parse_llm_response(raw: str) -> dict | None:
 
 async def _fetch_recent_user_messages(end_user_id: str, limit: int = 20) -> list[str]:
     """Fetch the last N user messages from SpendLogs (AI responses stripped)."""
-    since = datetime.now(UTC) - timedelta(days=7)
+    # naive datetime: SpendLogs.startTime is TIMESTAMP WITHOUT TIME ZONE
+    since = datetime.utcnow() - timedelta(days=7)
     async with Session() as session:
         query = (
             select(LiteLLM_SpendLogs.messages)
@@ -167,7 +168,7 @@ async def compute_behavioral_scores_and_summary(
     On failure/timeout: carry forward previous day's scores, placeholder summary.
     """
     if today is None:
-        today = datetime.now(UTC).date()
+        today = datetime.utcnow().date()
 
     repo = BehavioralRepository()
 
