@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     LANGFUSE_PUBLIC_KEY: str
     LANGFUSE_API_HOST: str
 
-    JUDGE_MODEL: str = "openai/gpt-oss-safeguard-20b"
-    BEHAVIORAL_LLM_MODEL: str = "openai/gpt-oss-safeguard-20b"
+    JUDGE_MODEL: str = "gemma3-vpn1"
+    BEHAVIORAL_LLM_MODEL: str = "gemma3-vpn1"
 
     API_BASE_URL: str
     API_KEY: str

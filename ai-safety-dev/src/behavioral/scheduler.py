@@ -50,8 +50,8 @@ async def start_behavioral_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone=timezone.utc)
 
     if settings.is_develop_mode:
-        trigger = IntervalTrigger(seconds=30)
-        logger.info("Behavioral scheduler: dev mode, running every 30s")
+        trigger = IntervalTrigger(seconds=60)
+        logger.info("Behavioral scheduler: dev mode, running every 60s")
     else:
         trigger = CronTrigger(hour=0, minute=30)
         logger.info("Behavioral scheduler: production, running daily at 00:30 UTC")
