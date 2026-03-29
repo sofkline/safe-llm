@@ -71,9 +71,28 @@ class BehavioralRepository:
     # --- DailySummary ---
 
     async def add_daily_summary(self, summary: DailySummary) -> None:
+        """Upsert: обновляем если запись за этот день уже есть, иначе вставляем."""
         async with self._session_factory() as session:
             async with session.begin():
-                await session.merge(summary)
+                existing = await session.execute(
+                    select(DailySummary).where(
+                        and_(
+                            DailySummary.end_user_id == summary.end_user_id,
+                            DailySummary.summary_date == summary.summary_date,
+                        )
+                    )
+                )
+                existing_row = existing.scalars().first()
+                if existing_row:
+                    existing_row.key_topics = summary.key_topics
+                    existing_row.life_events = summary.life_events
+                    existing_row.emotional_tone = summary.emotional_tone
+                    existing_row.ai_relationship_markers = summary.ai_relationship_markers
+                    existing_row.notable_quotes = summary.notable_quotes
+                    existing_row.operator_note = summary.operator_note
+                    existing_row.is_notable = summary.is_notable
+                else:
+                    session.add(summary)
 
     async def get_notable_calendar(
         self, end_user_id: str, limit: int = 14

@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     LANGFUSE_PUBLIC_KEY: str
     LANGFUSE_API_HOST: str
 
-    JUDGE_MODEL: str = "gemma3-vpn1"
-    BEHAVIORAL_LLM_MODEL: str = "gemma3-vpn1"
+    JUDGE_MODEL: str = "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+    BEHAVIORAL_LLM_MODEL: str = "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
 
     API_BASE_URL: str
     API_KEY: str
