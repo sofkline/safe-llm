@@ -254,6 +254,21 @@ async def clean_persona_data(persona: PersonaConfig, keep_spendlogs: bool = Fals
 
 # == Classify ==============================================================
 
+async def _ensure_user_exists(persona: PersonaConfig):
+    """Create a LiteLLM_UserTable row for the synthetic user if it doesn't exist."""
+    from database import Session as DBSession
+    from database.models import LiteLLM_UserTable
+
+    pid = persona.persona_id
+    async with DBSession() as session:
+        async with session.begin():
+            existing = await session.get(LiteLLM_UserTable, pid)
+            if not existing:
+                user = LiteLLM_UserTable(user_id=pid)
+                session.add(user)
+                logger.info("Created LiteLLM_UserTable row for %s", pid)
+
+
 async def classify_persona_spendlogs(persona: PersonaConfig):
     """Run 5-class LLM classification on SpendLogs -> PredictTable."""
     from database import Session as DBSession
@@ -264,6 +279,9 @@ async def classify_persona_spendlogs(persona: PersonaConfig):
 
     pid = persona.persona_id
     predict_repo = PredictRepository()
+
+    # PredictTable has FK to LiteLLM_UserTable — ensure user exists
+    await _ensure_user_exists(persona)
 
     async with DBSession() as session:
         query = (
@@ -323,6 +341,7 @@ async def run_generation(
     start_date: date = DEFAULT_START_DATE,
     dry_run: bool = False,
     option_b: bool = False,
+    api_base: str | None = None,
 ) -> list[dict]:
     """Generate dialogues for all days and insert into DB."""
     results = []
@@ -348,7 +367,7 @@ async def run_generation(
             })
             continue
 
-        day_results = await generate_day(persona, ds, plm_model, clm_model)
+        day_results = await generate_day(persona, ds, plm_model, clm_model, api_base)
 
         all_rows = []
         for session_plan, exchanges in day_results:
@@ -399,20 +418,23 @@ async def run_aggregation(
         logger.info("Aggregating %s day %d (simulated time: %s)",
                      persona.name, ds.day, simulated_now)
 
+        # Mock datetime in all pipeline modules so they see simulated_now
+        # Need naive version for modules using datetime.utcnow()
+        simulated_naive = simulated_now.replace(tzinfo=None)
+
         modules_to_mock = [
             "behavioral.temporal",
             "behavioral.danger_agg",
             "behavioral.behavioral_llm",
             "behavioral.aggregator",
+            "behavioral.repository",
         ]
         patches = []
         for mod in modules_to_mock:
-            p = patch(f"{mod}.datetime")
+            p = patch(f"{mod}.datetime", wraps=datetime)
             mock_dt = p.start()
             mock_dt.now.return_value = simulated_now
-            mock_dt.combine = datetime.combine
-            mock_dt.min = datetime.min
-            mock_dt.side_effect = lambda *a, **k: datetime(*a, **k)
+            mock_dt.utcnow.return_value = simulated_naive
             patches.append(p)
 
         try:
@@ -508,6 +530,8 @@ Data safety: every run auto-archives previous data to
                         help="Model for Patient LM")
     parser.add_argument("--clm-model", type=str, default="openrouter/google/gemma-3-12b",
                         help="Model for Clinician LM")
+    parser.add_argument("--api-base", type=str, default=None,
+                        help="API base URL for Ollama/local models (e.g. http://192.168.87.25:11434)")
     parser.add_argument("--start-date", type=str, default="2026-03-10",
                         help="Start date (YYYY-MM-DD)")
 
@@ -551,7 +575,7 @@ Data safety: every run auto-archives previous data to
         if args.dry_run:
             gen_results = await run_generation(
                 persona, args.plm_model, args.clm_model,
-                start_date, dry_run=True,
+                start_date, dry_run=True, api_base=args.api_base,
             )
             all_results.extend(gen_results)
             continue
@@ -571,6 +595,7 @@ Data safety: every run auto-archives previous data to
             await run_generation(
                 persona, args.plm_model, args.clm_model,
                 start_date, dry_run=False, option_b=args.option_b,
+                api_base=args.api_base,
             )
 
         # Step 2: Classify SpendLogs -> PredictTable (skip if reaggregate or option_b)

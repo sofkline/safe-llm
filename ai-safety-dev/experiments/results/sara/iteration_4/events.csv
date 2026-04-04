@@ -1,0 +1,3 @@
+detected_at,event_type,details
+2026-03-23 01:00:00,risk_zone_change,"{""old_zone"": ""GREEN"", ""new_zone"": ""RED"", ""triggered_rules"": [""social_isolation > 0.6 AND emotional_attachment > 0.5"", ""decision_delegation > 0.4""]}"
+2026-03-24 01:00:00,risk_zone_change,"{""old_zone"": ""RED"", ""new_zone"": ""YELLOW"", ""triggered_rules"": [""decision_delegation > 0.4"", ""interval_shrinking > 30%""]}"

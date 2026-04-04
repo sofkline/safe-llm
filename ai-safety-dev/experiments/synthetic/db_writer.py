@@ -30,10 +30,10 @@ def build_spendlogs_rows(
     cumulative_messages = []
 
     day_date = start_date + timedelta(days=day_script.day - 1)
+    # Naive datetime: SpendLogs.startTime is TIMESTAMP WITHOUT TIME ZONE
     base_time = datetime(
         day_date.year, day_date.month, day_date.day,
         session.hour, 0, 0,
-        tzinfo=timezone.utc,
     )
 
     for i, exchange in enumerate(exchanges):

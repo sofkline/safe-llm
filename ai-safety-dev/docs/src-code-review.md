@@ -1,8 +1,28 @@
 # Code Review: ai-safety-dev/src/
 
-**Date:** 2026-03-24 (updated)
-**Scope:** All Python files in `ai-safety-dev/src/` (21 files)
-**Tests:** 91 passing
+**Date:** 2026-03-31 (updated)
+**Scope:** All Python files in `ai-safety-dev/src/` (22 files)
+**Tests:** 93 passing
+**Supersedes:** 2026-03-24 version
+
+---
+
+## Changes since 2026-03-24 review
+
+1. **Middleware renamed**: `BinaryUserSafetyGuardrailMiddleware` → `BehavioralSafetyMiddleware`. `custom_guardrails.py` removed (archived).
+2. **Dead code removed**: `MULTI_LABEL_POLICY_PROMPT_SYCOPHANCY` deleted from `prompts.py` (120 lines, schema mismatch). `_openai_error` method removed from middleware.
+3. **`messages_last_1h` metric removed** from `temporal.py` — 6 metrics instead of 7. No risk engine rule used it.
+4. **`delusion_flag_rate` YELLOW rule added** to `risk_engine.py` — sustained > 0.2 over 3+ days.
+5. **Silent days handling** in `aggregator.py` — early return when `daily_message_count == 0`, risk zone preserved.
+6. **`langfuse_scores.py` added** — writes behavioral scores to Langfuse traces (wired into aggregator).
+7. **Human-readable trigger explanations** added to `weekly_report.py` (`_explain_trigger`, 13 rules).
+8. **Langfuse SDK unification** — `langfuse_scraper.py` rewritten to use `from langfuse import Langfuse` instead of raw `httpx`. Removed: httpx, manual pagination, JSON parsing.
+9. **`NIGHT_HOURS` fix**: `{0, 1, 2, 3, 4, 5}` → `{1, 2, 3, 4, 5}` (per user definition).
+10. **`temporal.py` Langfuse fallback** — when SpendLogs has rows but empty `messages`, fetches from Langfuse traces. Also reads `proxy_server_request` for LiteLLM v1.81.8+ compatibility.
+11. **`classificators.py`**: `__main__` demo cleaned up.
+12. **Unused imports removed** from middleware (`asyncio`, `litellm`, `JSONResponse`).
+13. **Tests**: 91 → 93 (+3 `TestDelusionFlagRate` tests, aggregator mocks updated for silent days).
+14. **Dev mode intervals**: behavioral scheduler 30s → 60s.
 
 ---
 
@@ -17,7 +37,7 @@ graph TB
     end
 
     subgraph "LiteLLM Proxy Server"
-        MW[middleware.py<br/>Binary Classification<br/>+ Risk Zone Injection]
+        MW[middleware.py<br/>BehavioralSafetyMiddleware<br/>Binary Classify + Risk Zone Inject]
         PROXY[LiteLLM Proxy<br/>litellm.proxy.proxy_server]
     end
 
@@ -30,11 +50,12 @@ graph TB
     subgraph "Behavioral Monitoring Pipeline"
         BS[behavioral/scheduler.py<br/>Daily 00:30 UTC]
         AGG[behavioral/aggregator.py<br/>4-stage orchestrator]
-        S1[behavioral/temporal.py<br/>Stage 1: 7 temporal metrics]
+        S1[behavioral/temporal.py<br/>Stage 1: 6 temporal metrics]
         S2[behavioral/danger_agg.py<br/>Stage 2: 5 danger classes]
         S3[behavioral/behavioral_llm.py<br/>Stage 3: LLM scores + summary]
         S4[behavioral/risk_engine.py<br/>Stage 4: GREEN/YELLOW/RED]
         WR[behavioral/weekly_report.py<br/>Weekly report generator]
+        LFS[behavioral/langfuse_scores.py<br/>Write scores to Langfuse]
     end
 
     subgraph "Data Layer"
@@ -61,7 +82,7 @@ graph TB
 
     %% Langfuse scraper flow
     LS_SCHED -->|hourly| LS
-    LS -->|fetch traces| LF
+    LS -->|fetch traces via SDK| LF
     LS -->|multi-label classify| CLASS
     LS -->|write predictions| PREPO
     CLASS -->|call judge model| OR
@@ -73,27 +94,15 @@ graph TB
     AGG --> S3
     AGG --> S4
     S1 -->|read SpendLogs| PG
+    S1 -->|fallback: read traces| LF
     S2 -->|read PredictTable| PG
     S3 -->|call LLM| OR
     S3 -->|read calendar| BREPO
     S4 -->|read history| BREPO
     AGG -->|write results| BREPO
+    AGG -->|write scores| LFS
+    LFS -->|attach scores| LF
     WR -->|read all tables| BREPO
-
-    %% Data layer
-    PREPO --> PG
-    BREPO --> PG
-    DB_INIT --> PG
-
-    %% Config
-    CFG -.-> MW
-    CFG -.-> LS
-    CFG -.-> S3
-    CFG -.-> DB_INIT
-    YAML -.-> PROXY
-    SCH -.-> CLASS
-    PROM -.-> CLASS
-    PROM -.-> MW
 ```
 
 ---
@@ -103,7 +112,7 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant MW as Middleware
+    participant MW as BehavioralSafetyMiddleware
     participant BC as Binary Classifier
     participant BR as BehavioralRepo
     participant P as LiteLLM Proxy
@@ -113,6 +122,7 @@ sequenceDiagram
     MW->>BC: classify user text (0/1)
     BC-->>MW: verdict="0"
     MW->>MW: tag metadata with verdict
+    MW->>MW: set end_user from body/header
     MW->>BR: get_risk_zone(end_user)
     BR-->>MW: "YELLOW"
     MW->>MW: prepend YELLOW system prompt
@@ -129,18 +139,26 @@ sequenceDiagram
     participant SCH as Scheduler (00:30 UTC)
     participant AGG as Aggregator
     participant SL as SpendLogs
+    participant LF as Langfuse
     participant PT as PredictTable
     participant LLM as Behavioral LLM
     participant DS as DailySummary
     participant MH as MetricsHistory
     participant UP as UserBehaviorProfile
     participant BE as BehavioralEvents
+    participant LFS as Langfuse Scores
 
     SCH->>AGG: run_aggregator_for_user(id)
 
     Note over AGG: Stage 1
     AGG->>SL: last 24h messages
-    SL-->>AGG: temporal_metrics (7 fields)
+    alt SpendLogs has empty messages
+        AGG->>LF: fetch traces (fallback)
+    end
+    SL-->>AGG: temporal_metrics (6 fields)
+    alt daily_message_count == 0
+        AGG-->>AGG: early return (zone preserved)
+    end
     AGG->>MH: get 7-day history
     MH-->>AGG: baselines + trend_flags
 
@@ -163,6 +181,7 @@ sequenceDiagram
     AGG->>DS: write daily summary
     AGG->>UP: upsert profile
     AGG->>BE: write event (if zone changed or RED)
+    AGG->>LFS: write scores to Langfuse (best-effort)
 ```
 
 ---
@@ -199,6 +218,7 @@ graph LR
         agg[behavioral/aggregator.py]
         beh_sched[behavioral/scheduler.py]
         weekly[behavioral/weekly_report.py]
+        lf_scores[behavioral/langfuse_scores.py]
     end
 
     subgraph "Entrypoint"
@@ -213,6 +233,8 @@ graph LR
     config --> scraper
     config --> lang_sched
     config --> beh_sched
+    config --> temporal
+    config --> lf_scores
     schemas --> classif
     prompts --> classif
     prompts --> middleware
@@ -239,11 +261,10 @@ graph LR
     %% Behavioral deps
     temporal --> db_init
     temporal --> db_models
+    temporal --> config
     danger --> db_init
     danger --> db_models
     beh_llm --> config
-    beh_llm --> db_init
-    beh_llm --> db_models
     beh_llm --> b_repo
     beh_llm --> temporal
     risk --> |standalone| risk
@@ -253,11 +274,13 @@ graph LR
     agg --> danger
     agg --> beh_llm
     agg --> risk
+    agg --> lf_scores
     beh_sched --> config
     beh_sched --> db_init
     beh_sched --> db_models
     beh_sched --> agg
     weekly --> b_repo
+    lf_scores --> config
 
     %% Entrypoint deps
     main --> config
@@ -291,7 +314,7 @@ graph LR
 
 ---
 
-#### schemas.py (19 lines)
+#### schemas.py (20 lines)
 
 **Purpose:** Pydantic response models for the multi-label safety classifier.
 
@@ -305,25 +328,25 @@ graph LR
 
 ---
 
-#### prompts.py (327 lines)
+#### prompts.py (207 lines)
 
 **Purpose:** Policy prompts for binary and multi-label LLM safety classification.
 
-**Key exports:** `POLICY` (binary 0/1 prompt), `MULTI_LABEL_POLICY_PROMPT`, `MULTI_LABEL_POLICY_PROMPT_SYCOPHANCY`
+**Key exports:** `MULTI_LABEL_POLICY_PROMPT` (multi-label 5-class), `POLICY` (binary 0/1)
 
-**Workflow:** `POLICY` is injected into the middleware for per-request binary classification. `MULTI_LABEL_POLICY_PROMPT` is used by the Langfuse scraper for daily multi-label classification.
+**Workflow:** `POLICY` is injected into the middleware for per-request binary classification. `MULTI_LABEL_POLICY_PROMPT` is used by the Langfuse scraper for hourly multi-label classification.
 
 **Dependencies:** None (pure text)
 
-**Status:** Needs cleanup.
-- `MULTI_LABEL_POLICY_PROMPT_SYCOPHANCY` adds a `sycophancy` field not in `SafetyMultilabel` schema. Currently unused (dead code) but would break if activated.
-- Heavy duplication between the two multi-label prompts.
+**Status:** Production-ready.
+- ~~`MULTI_LABEL_POLICY_PROMPT_SYCOPHANCY` dead code~~ — removed in 2026-03-29 cleanup.
+- Both prompts include Russian and English examples for bilingual coverage.
 
 ---
 
 ### Entrypoint & Middleware
 
-#### main.py (49 lines)
+#### main.py (50 lines)
 
 **Purpose:** Application entrypoint. Wires LiteLLM proxy with safety middleware, database bootstrap, and both schedulers.
 
@@ -331,41 +354,45 @@ graph LR
 
 **Workflow:**
 1. Imports the LiteLLM proxy app
-2. Attaches `BinaryUserSafetyGuardrailMiddleware` (binary classification + risk zone injection)
+2. Attaches `BehavioralSafetyMiddleware` (binary classification + risk zone injection)
 3. Wraps the lifespan to: create DB tables -> start Langfuse scheduler -> start behavioral scheduler
 4. On shutdown: gracefully stops both schedulers
 
 **Dependencies:** `config`, `database`, `middleware`, `prompts`, `scheduler`, `behavioral.scheduler`
 
-**Status:** Production-ready. Uses `settings.JUDGE_MODEL` for model config (fixed).
+**Status:** Production-ready. Uses `settings.JUDGE_MODEL` for model config.
 
 ---
 
-#### middleware.py (193 lines)
+#### middleware.py (177 lines)
 
 **Purpose:** Starlette middleware that performs binary safety classification on every request AND injects risk-zone-based safety prompts for YELLOW/RED users.
 
-**Key exports:** `BinaryUserSafetyGuardrailMiddleware`, `_inject_risk_zone_prompt`
+**Key exports:** `BehavioralSafetyMiddleware`, `_inject_risk_zone_prompt`
 
 **Workflow (per request):**
-1. Check if request matches allowlisted path/method (`POST /v1/chat/completions`)
+1. Check if request matches allowlisted path/method (`POST /v1/chat/completions` or `/chat/completions`)
 2. Parse JSON body, extract last user message
-3. Call binary classifier via `input_classification()` -> tag verdict in metadata
-4. Look up user's `risk_zone` from `UserBehaviorProfile` via `BehavioralRepository`
-5. If YELLOW/RED: prepend fixed safety system message to messages array
-6. Forward modified request to LiteLLM proxy
+3. Call binary classifier via `input_classification()` → tag verdict in `metadata.tags` (`safety_verdict:0` or `safety_verdict:1`)
+4. Set `end_user` from body, `x-openwebui-user-id` header, or fallback `"default_user"`
+5. Look up user's `risk_zone` from `UserBehaviorProfile` via `BehavioralRepository`
+6. If YELLOW/RED → prepend fixed safety system message to messages array
+7. Forward modified request to LiteLLM proxy
 
 **Dependencies:** `classificators`, `prompts`, `behavioral.repository`
 
-**Status:** Production-ready (after fixes).
-- `_extract_user_text` now returns `""` instead of `None` (fixed).
-- `_openai_error` method is dead code — middleware only classifies and tags, never blocks. Could be removed but harmless.
+**Status:** Production-ready.
+- Renamed from `BinaryUserSafetyGuardrailMiddleware` (2026-03-29).
+- ~~`_openai_error` dead code~~ — removed.
+- ~~`_extract_user_text` returns None~~ — now returns `""` (fixed).
+- Binary classification does NOT block — only tags. Models' own guardrails handle blocking.
+- Risk zone DB query is ~1-5ms, no cache — acceptable for daily-updated zones.
 
 ---
 
 ### Classification Layer
 
-#### classificators.py (72 lines)
+#### classificators.py (65 lines)
 
 **Purpose:** Async wrappers for binary (0/1) and multi-label LLM safety classification.
 
@@ -377,11 +404,12 @@ graph LR
 
 **Dependencies:** `litellm`, `config`, `prompts`, `schemas`
 
-**Status:** Production-ready (after fix). Demo block now uses correct function signature.
+**Status:** Production-ready.
+- `__main__` demo cleaned up (2026-03-29).
 
 ---
 
-#### scheduler.py (34 lines)
+#### scheduler.py (35 lines)
 
 **Purpose:** APScheduler job that triggers Langfuse session scraping on a timer.
 
@@ -391,26 +419,31 @@ graph LR
 
 **Dependencies:** `config`, `langfuse_scraper`
 
-**Status:** Production-ready (after fix). Now schedules one global job instead of broken per-user jobs.
+**Status:** Production-ready.
 
 ---
 
-#### langfuse_scraper.py (187 lines)
+#### langfuse_scraper.py (146 lines)
 
-**Purpose:** Fetches conversation traces from Langfuse HTTP API and runs multi-label classification on new sessions.
+**Purpose:** Fetches conversation traces from Langfuse SDK and runs multi-label classification on new sessions.
 
 **Key exports:** `scrape_sessions_for_previous_hour`
 
 **Workflow:**
-1. Compute time window (last N hours based on `SCRAPE_HOURS_WINDOW`)
-2. Fetch traces from Langfuse API, extract unique session IDs
-3. For each session: get traces, find latest, extract user ID from metadata
-4. If session not already classified (or new trace): run `daily_classification`
-5. Store result in `LiteLLM_PredictTable` (consumed by Stage 2)
+1. Create Langfuse client with credentials from `settings`
+2. Fetch traces for the time window (`SCRAPE_HOURS_WINDOW`)
+3. Group traces by `session_id`
+4. For each session: find latest trace, extract user ID from metadata, extract messages from trace input/output
+5. If session not already classified (or new trace): run `daily_classification`
+6. Store result in `LiteLLM_PredictTable` (consumed by Stage 2)
 
-**Dependencies:** `httpx`, `classificators`, `config`, `database.models`, `database.repository`
+**Dependencies:** `langfuse`, `classificators`, `config`, `database.models`, `database.repository`
 
-**Status:** Production-ready (after fixes). Error handling added for nested metadata access. Each session processed in try/except.
+**Status:** Production-ready.
+- Rewritten in 2026-03-29 to use Langfuse SDK (`from langfuse import Langfuse`) instead of raw `httpx`. Removed manual HTTP requests, pagination, and JSON response parsing.
+- `_extract_session_id` handles both SDK trace objects and dict fallback.
+- `_extract_user_id` reads `user_api_key_user_id` from nested metadata (LiteLLM format).
+- Each session processed in try/except for per-session error isolation.
 
 ---
 
@@ -455,13 +488,21 @@ graph LR
 
 **Dependencies:** `database` (Session), `database.models`
 
-**Status:** Production-ready (after fixes). Session factory pattern fixed. `created_at` now selected in `last_time_recorded_by_all_users`. Redundant `commit()` removed.
+**Status:** Production-ready. Session factory pattern, `created_at` selected in `last_time_recorded_by_all_users`.
 
 ---
 
 ### Behavioral Monitoring Module
 
-#### behavioral/models.py (89 lines)
+#### behavioral/\_\_init\_\_.py (1 line)
+
+**Purpose:** Package marker. Single docstring.
+
+**Status:** Fine.
+
+---
+
+#### behavioral/models.py (73 lines)
 
 **Purpose:** 4 SQLAlchemy models for the behavioral monitoring system.
 
@@ -475,11 +516,11 @@ graph LR
 
 **Dependencies:** `database.models` (Base)
 
-**Status:** Production-ready. All columns match the v3 spec exactly.
+**Status:** Production-ready. All columns match the v3 spec. No FK constraints (removed for dev testing flexibility).
 
 ---
 
-#### behavioral/repository.py (180 lines)
+#### behavioral/repository.py (200 lines)
 
 **Purpose:** Data access layer for all 4 behavioral tables with date-range queries.
 
@@ -493,59 +534,70 @@ graph LR
 
 **Dependencies:** `database` (Session), `behavioral.models`
 
-**Status:** Production-ready. Fresh session per method call. Upsert via `merge()` for profile and daily summary.
+**Status:** Production-ready. Fresh session per method call. Upsert via `merge()` for profile; explicit select-then-update for daily summary (preserves unique constraint).
 
 ---
 
-#### behavioral/aggregator.py (146 lines)
+#### behavioral/aggregator.py (157 lines)
 
 **Purpose:** Main 4-stage daily pipeline orchestrator.
 
 **Key exports:** `run_aggregator_for_user`
 
 **Workflow:**
-1. Stage 1: `compute_temporal_metrics()` -> 7 temporal metrics from SpendLogs
-2. Compute baselines (7-day rolling avg from MetricsHistory) + trend flags
-3. Stage 2: `compute_danger_class_agg()` -> 9 danger metrics from PredictTable
-4. Stage 3: `compute_behavioral_scores_and_summary()` -> 4 scores + daily summary via LLM
-5. Stage 4: `evaluate_risk_zone()` -> GREEN/YELLOW/RED from all inputs
-6. Write: MetricsHistory, DailySummary, UserBehaviorProfile, BehavioralEvent (on zone change or RED)
+1. Stage 1: `compute_temporal_metrics()` → 6 temporal metrics from SpendLogs
+2. **Silent day check**: if `daily_message_count == 0`, return early — risk zone preserved
+3. Compute baselines (7-day rolling avg from MetricsHistory) + trend flags
+4. Stage 2: `compute_danger_class_agg()` → 9 danger metrics from PredictTable
+5. Stage 3: `compute_behavioral_scores_and_summary()` → 4 scores + daily summary via LLM
+6. Stage 4: `evaluate_risk_zone()` → GREEN/YELLOW/RED from all inputs
+7. Write: MetricsHistory, DailySummary, UserBehaviorProfile, BehavioralEvent (on zone change or RED)
+8. Write behavioral scores to Langfuse (best-effort, via `langfuse_scores.py`)
 
-**Dependencies:** All 4 stage modules, `behavioral.repository`, `behavioral.models`
+**Dependencies:** All 4 stage modules, `behavioral.repository`, `behavioral.models`, `behavioral.langfuse_scores`
 
 **Status:** Production-ready.
 - `_compute_is_notable()` implements all 5 calendar filtering rules from spec.
 - Events emitted on zone change OR repeated RED (spec compliant).
+- Silent day handling added 2026-03-29: `daily_message_count == 0` → early return, zone preserved.
+- Langfuse score writing added 2026-03-29 (lazy import, best-effort).
 
 ---
 
-#### behavioral/temporal.py (185 lines)
+#### behavioral/temporal.py (254 lines)
 
-**Purpose:** Stage 1 — compute 24h temporal usage metrics from SpendLogs.
+**Purpose:** Stage 1 — compute 24h temporal usage metrics from SpendLogs, with Langfuse fallback.
 
-**Key exports:** `compute_temporal_metrics`, `compute_baselines`, `compute_trend_flags`, `_extract_last_user_message`
+**Key exports:** `compute_temporal_metrics`, `compute_baselines`, `compute_trend_flags`, `_extract_last_user_message`, `_fetch_spendlogs_rows`
 
-**7 metrics computed:**
+**6 metrics computed:**
 | Metric | Field | Window |
 |--------|-------|--------|
 | Message count | `daily_message_count` | 24h |
 | Hourly histogram | `activity_by_hour` | 24h |
-| Night messages | `night_messages` | 24h (hours 22,23,0,1,2,3) |
+| Night messages | `night_messages` | 24h (hours 1,2,3,4,5) |
 | Active hours | `daily_active_hours` | 24h |
 | Avg prompt length | `avg_prompt_length_chars` | 24h |
 | Inter-message interval | `avg_inter_message_interval_min` | 24h |
-| Burst detection | `messages_last_1h` | 1h |
 
-**Workflow:** Queries `LiteLLM_SpendLogs` for last 24h, extracts last user message from each cumulative `messages` JSON array, computes all metrics in Python.
+**Dropped:** `messages_last_1h` (removed 2026-03-29 — no risk engine rule used it).
 
-**Dependencies:** `database` (Session), `database.models` (LiteLLM_SpendLogs)
+**Workflow:**
+1. Query `LiteLLM_SpendLogs` for last 24h
+2. Try to extract messages from `messages` column, then from `proxy_server_request` (LiteLLM v1.81.8+ compatibility)
+3. If SpendLogs has rows but empty messages → **fallback to Langfuse SDK** (`_fetch_langfuse_traces`)
+4. Extract last user message from each row, compute all metrics in Python
+
+**Dependencies:** `database` (Session), `database.models` (LiteLLM_SpendLogs), `config` (Langfuse credentials)
 
 **Status:** Production-ready.
 - `_extract_last_user_message` is also used by `behavioral_llm.py` (cross-module import of private function — works but noted).
+- `_get_messages_from_row` handles both direct `messages` list and nested `proxy_server_request.messages`.
+- `NIGHT_HOURS = {1, 2, 3, 4, 5}` — fixed from `{0, 1, 2, 3, 4, 5}` (2026-03-29).
 
 ---
 
-#### behavioral/danger_agg.py (130 lines)
+#### behavioral/danger_agg.py (132 lines)
 
 **Purpose:** Stage 2 — aggregate 24h danger-class scores from PredictTable.
 
@@ -567,25 +619,25 @@ graph LR
 
 ---
 
-#### behavioral/behavioral_llm.py (245 lines)
+#### behavioral/behavioral_llm.py (237 lines)
 
 **Purpose:** Stage 3 — call LLM to produce 4 behavioral scores + structured daily summary.
 
 **Key exports:** `compute_behavioral_scores_and_summary`
 
 **Workflow:**
-1. Fetch last 20 user messages from SpendLogs (within 7 days)
+1. Fetch last 20 user messages from SpendLogs (within 7 days), with Langfuse fallback via `_fetch_spendlogs_rows`
 2. Fetch notable calendar entries (up to 14) from DailySummary
 3. Build prompt with date + messages + calendar
 4. Call LLM via `litellm.acompletion(model=BEHAVIORAL_LLM_MODEL)`
-5. Parse JSON response, validate all score keys, clamp 0-1, fill missing summary defaults
+5. Parse JSON response (handles raw JSON + markdown code blocks), validate all score keys, clamp 0-1, fill missing summary defaults
 6. On failure: carry forward previous scores from MetricsHistory
 
 **4 behavioral scores:** `topic_concentration`, `decision_delegation`, `social_isolation`, `emotional_attachment`
 
 **6 summary fields:** `key_topics`, `life_events`, `emotional_tone`, `ai_relationship_markers`, `notable_quotes`, `operator_note`
 
-**Dependencies:** `litellm`, `config`, `database`, `behavioral.repository`, `behavioral.temporal`
+**Dependencies:** `litellm`, `config`, `behavioral.repository`, `behavioral.temporal`
 
 **Status:** Production-ready.
 - LLM call uses `settings.BEHAVIORAL_LLM_MODEL` — configurable to Ollama, OpenRouter, OpenWebUI, etc.
@@ -593,35 +645,40 @@ graph LR
 
 ---
 
-#### behavioral/risk_engine.py (112 lines)
+#### behavioral/risk_engine.py (122 lines)
 
 **Purpose:** Stage 4 — rule-based risk zone engine mapping metrics to GREEN/YELLOW/RED.
 
 **Key exports:** `evaluate_risk_zone`
 
 **Rules:**
-- **YELLOW (any 2):** night_messages > 24, daily_msgs > 50 + trending up, max_class_avg > 0.3, topic_concentration > 0.7, decision_delegation > 0.4, interval shrinking > 30%
+- **YELLOW (any 2):** night_messages > 24, daily_msgs > 50 + trending up, max_class_avg > 0.3, topic_concentration > 0.7, decision_delegation > 0.4, interval shrinking > 30%, **delusion_flag_rate > 0.2 sustained 3 days** (NEW)
 - **RED (any 1):** self_harm_flag_rate > 0.3 OR max > 0.8, active_hours > 6, msgs > 200, sustained YELLOW >= 3 days, isolation > 0.6 AND attachment > 0.5
 - RED overrides YELLOW
 
 **Dependencies:** None (standalone logic). Async for future extensibility (v2 may use LLM).
 
-**Status:** Production-ready. All thresholds hardcoded per spec.
+**Status:** Production-ready.
+- All thresholds hardcoded per spec.
+- `delusion_flag_rate` sustained YELLOW rule added 2026-03-29 — reads last 3 days from `recent_history`.
 
 ---
 
-#### behavioral/weekly_report.py (170 lines)
+#### behavioral/weekly_report.py (249 lines)
 
 **Purpose:** Generates weekly plain-text reports from DB data. No LLM call.
 
-**Key exports:** `generate_weekly_report`
+**Key exports:** `generate_weekly_report`, `_explain_trigger`
 
 **Report sections:**
 1. **Header** — user ID, date range, current risk zone
 2. **Stats** — 6 metrics with week-over-week comparison (messages, night, hours, length, self-harm, psychosis)
 3. **Notable days** — timeline from DailySummary (topics, events, tone, quotes, operator notes)
 4. **Behavioral scores** — latest topic_concentration, isolation, attachment, delegation
-5. **Risk transitions** — zone changes from BehavioralEvents
+5. **Risk transitions** — zone changes from BehavioralEvents with human-readable explanations
+
+**Trigger explanations (13 rules):**
+Raw trigger strings (e.g., `"night_messages > 24"`) are converted to human-readable text (e.g., `"User sent 37 messages between 22:00-03:00 (baseline: 5)"`). Context dict provides actual metric values from `MetricsHistory` for the event date.
 
 **Dependencies:** `behavioral.repository`
 
@@ -629,7 +686,28 @@ graph LR
 
 ---
 
-#### behavioral/scheduler.py (68 lines)
+#### behavioral/langfuse_scores.py (72 lines) — NEW
+
+**Purpose:** Write behavioral monitoring scores to Langfuse as custom scores on user traces.
+
+**Key exports:** `write_behavioral_scores_to_langfuse`
+
+**Workflow:**
+1. Create Langfuse client with credentials from `settings`
+2. Fetch user's most recent trace (last 24h)
+3. Attach scores: `risk_zone` (mapped to 0.0/0.5/1.0), 4 `behavioral_*` scores, `max_danger_class_avg`
+4. Flush to Langfuse
+
+**Dependencies:** `langfuse`, `config`
+
+**Status:** Production-ready.
+- Best-effort: logs warning on failure, never raises.
+- Called from `aggregator.py` via lazy import.
+- Enables Langfuse dashboard visibility for behavioral monitoring results.
+
+---
+
+#### behavioral/scheduler.py (71 lines)
 
 **Purpose:** APScheduler job that discovers active users and runs the behavioral aggregator daily.
 
@@ -637,8 +715,9 @@ graph LR
 
 **Workflow:**
 1. On trigger: query SpendLogs for distinct `end_user` IDs active in last 48h
-2. For each user: call `run_aggregator_for_user(user_id)` with per-user error handling
-3. Production: runs daily at 00:30 UTC. Dev mode: every 30 seconds.
+2. Filter out empty/whitespace user IDs
+3. For each user: call `run_aggregator_for_user(user_id)` with per-user error handling
+4. Production: runs daily at 00:30 UTC. Dev mode: every 60 seconds.
 
 **Dependencies:** `config`, `database` (Session), `database.models`, `behavioral.aggregator`
 
@@ -657,11 +736,12 @@ graph LR
 | pydantic-settings | 2.12.0 | Environment variable config |
 | apscheduler | 3.11.2 | Both schedulers (Langfuse hourly + behavioral daily) |
 | fastapi | 0.128.4 | Underlying web framework (via LiteLLM) |
-| langfuse | >=2.0,<3.0 | Tracing + observability |
-| httpx | (via litellm) | Langfuse API HTTP client |
+| langfuse | >=2.0,<3.0 | Tracing + observability + Langfuse scraper SDK + Langfuse scores |
 | uvicorn | 0.31.1 | ASGI server |
 
 **Test dependencies:** pytest, pytest-asyncio, aiosqlite (in-memory SQLite for tests)
+
+**Removed:** `httpx` direct usage (replaced by Langfuse SDK in scraper)
 
 ---
 
@@ -669,9 +749,11 @@ graph LR
 
 | # | Severity | File | Issue |
 |---|----------|------|-------|
-| 1 | Minor | prompts.py | `MULTI_LABEL_POLICY_PROMPT_SYCOPHANCY` is dead code with schema mismatch. Safe to remove. |
-| 2 | Minor | middleware.py | `_openai_error` method is dead code. Middleware never blocks, only tags + injects. |
-| 3 | Minor | database/__init__.py | `asyncio.sleep(1)` startup workaround undocumented. |
-| 4 | Enhancement | weekly_report.py | Not wired into scheduler/endpoint — must be triggered manually. |
-| 5 | Enhancement | risk_engine.py | Function is `async` with no `await` — intentional for v2 extensibility. |
-| 6 | Enhancement | behavioral/scheduler.py | Sequential user processing — `asyncio.gather` would help at scale. |
+| 1 | Minor | database/__init__.py | `asyncio.sleep(1)` startup workaround undocumented. |
+| 2 | Enhancement | weekly_report.py | Not wired into scheduler/endpoint — must be triggered manually. |
+| 3 | Enhancement | risk_engine.py | Function is `async` with no `await` — intentional for v2 extensibility. |
+| 4 | Enhancement | behavioral/scheduler.py | Sequential user processing — `asyncio.gather` would help at scale. |
+
+**Resolved since 2026-03-24:**
+- ~~prompts.py: `MULTI_LABEL_POLICY_PROMPT_SYCOPHANCY` dead code~~ — deleted.
+- ~~middleware.py: `_openai_error` dead code~~ — removed (class rewritten as `BehavioralSafetyMiddleware`).
