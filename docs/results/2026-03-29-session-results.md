@@ -287,6 +287,71 @@ PYTHONPATH=experiments py -m synthetic.runner --persona sara --reaggregate
 
 ---
 
+## Debugging: End-to-End Pipeline (29 марта, вечер)
+
+Серия ошибок при первом реальном запуске на сервере. Каждая фиксилась отдельным коммитом.
+
+### Хронология проблем и решений
+
+| # | Ошибка | Причина | Коммит |
+|---|--------|---------|--------|
+| 1 | `can't subtract offset-naive and offset-aware datetimes` | SpendLogs.startTime это TIMESTAMP WITHOUT TIME ZONE, а код передавал datetime.now(UTC) | `7b0a2fe` |
+| 2 | SpendLogs.messages всегда `{}` | LiteLLM v1.81.8 не пишет messages по умолчанию | `0fc0b31` |
+| 3 | end_user всегда пустой | Playground не отправляет поле user | `b3617d7` |
+| 4 | Messages всё ещё пустые после config fix | LiteLLM пишет в `proxy_server_request`, не в `messages` | `8ff6d99` |
+| 5 | Langfuse fallback для messages | proxy_server_request тоже не всегда заполнен | `b2ec6af` |
+| 6 | `ForeignKeyViolationError` на MetricsHistory | end_user_id="sonya" нет в LiteLLM_UserTable | `5d284aa` |
+| 7 | `AuthenticationError` в Stage 3 | behavioral_llm.py не передавал api_key | `8b593bc` |
+| 8 | `BadRequestError: LLM Provider NOT provided` | gemma3-vpn1 это alias, не полное имя модели | `9bedcd2` |
+| 9 | `UniqueViolationError` на DailySummary | merge() не работает без existing id | `9bedcd2` |
+| 10 | Playground path не перехватывается | Middleware слушал `/v1/chat/completions`, Playground шлёт на `/chat/completions` | `2d521b6` |
+
+### Итоговый результат
+
+После всех фиксов — полный pipeline работает:
+
+```
+Playground message "умоляю работай"
+  -> middleware: safety_verdict:0, end_user=default_user
+  -> SpendLogs: row created (messages empty, but Langfuse has data)
+  -> Aggregator (60s later):
+     Stage 1: Langfuse fallback -> temporal_metrics (1 msg, 1 active hour)
+     Stage 2: danger_class_agg (all zeros, no PredictTable data)
+     Stage 3: Nemotron -> scores (topic=0.9, delegation=0.8, isolation=0.6, attachment=0.85)
+     Stage 4: YELLOW (topic_concentration > 0.7 + decision_delegation > 0.4)
+  -> DailySummary: "urgent and pleading", operator_note references calendar
+  -> UserBehaviorProfile: risk_zone=YELLOW
+  -> Langfuse scores: risk_zone=0.5, behavioral_* scores written
+  -> Next request: YELLOW prompt injected!
+```
+
+**Langfuse trace подтверждает:**
+- `userId: "default_user"` -- middleware работает
+- `tags: ["safety_verdict:0"]` -- бинарный классификатор работает
+- Input содержит YELLOW system prompt -- мягкий middleware работает
+- Scores на трейсе: `risk_zone=YELLOW`, все 4 behavioral scores -- Langfuse integration работает
+- Calendar в Stage 3 prompt -- cross-day references работают
+
+### Ключевой урок для LiteLLM v1.81.8
+
+```
+Данные в SpendLogs:
+  messages:              ВСЕГДА ПУСТЫЕ (даже с store_prompts_in_spend_logs)
+  proxy_server_request:  ИНОГДА содержит messages (зависит от endpoint)
+  response:              РАБОТАЕТ (JSON с id, model, choices)
+  end_user:              ПУСТОЙ из Playground (нет user field)
+
+Данные в Langfuse:
+  trace.input:           ВСЕГДА содержит messages
+  trace.output:          ВСЕГДА содержит response
+  trace.userId:          РАБОТАЕТ (если middleware установил user)
+
+Вывод: Langfuse — единственный надёжный источник messages.
+SpendLogs — надёжный только для timestamps и end_user.
+```
+
+---
+
 ## Next Steps
 
 1. Запустить первый эксперимент (Sara — control, простейший случай)
@@ -301,6 +366,15 @@ PYTHONPATH=experiments py -m synthetic.runner --persona sara --reaggregate
 ## Commits
 
 ```
+7b0a2fe fix: use naive datetimes for PostgreSQL TIMESTAMP WITHOUT TIME ZONE
+0fc0b31 fix: use store_prompts_in_spend_logs for message storage
+b3617d7 fix: assign default_user when no user identity provided
+8ff6d99 fix: read messages from proxy_server_request fallback
+b2ec6af feat: Langfuse fallback for messages when SpendLogs is empty
+5d284aa fix: remove FK constraints, change defaults for dev testing
+8b593bc fix: pass api_key to Stage 3 LLM + skip empty user IDs
+9bedcd2 fix: use nemotron-3-super for behavioral LLM + fix DailySummary upsert
+2d521b6 fix: intercept /chat/completions (LiteLLM Playground path)
 fdf7056 fix: enable message logging in SpendLogs + set end_user
 84d5fb1 feat: register binary safety guardrail in LiteLLM config
 1a3ab6b refactor: unify Langfuse SDK, clean dead code, add eRisk converter
