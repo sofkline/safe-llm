@@ -1,0 +1,8 @@
+Persona: James (Джеймс)
+Iteration: 2
+Archived at: 2026-04-04T21:57:12.603923
+SpendLogs rows: 223
+PredictTable rows: 32
+MetricsHistory rows: 14
+DailySummary rows: 14
+BehavioralEvent rows: 2
