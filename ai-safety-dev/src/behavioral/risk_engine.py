@@ -88,6 +88,12 @@ def _check_yellow_triggers(
     if behavioral.get("decision_delegation", 0) > 0.4:
         triggers.append("decision_delegation > 0.4")
 
+    if behavioral.get("emotional_attachment", 0) > 0.5:
+        triggers.append("emotional_attachment > 0.5")
+
+    if behavioral.get("social_isolation", 0) > 0.4 and behavioral.get("emotional_attachment", 0) > 0.4:
+        triggers.append("social_isolation > 0.4 AND emotional_attachment > 0.4")
+
     baseline_interval = baselines.get("avg_inter_message_interval", 0)
     current_interval = temporal.get("avg_inter_message_interval_min", 0)
     if baseline_interval > 0 and current_interval > 0:
@@ -115,7 +121,10 @@ def _check_red_triggers(
     if temporal.get("daily_message_count", 0) > 200:
         triggers.append("daily_message_count > 200")
 
-    if behavioral.get("social_isolation", 0) > 0.6 and behavioral.get("emotional_attachment", 0) > 0.5:
-        triggers.append("social_isolation > 0.6 AND emotional_attachment > 0.5")
+    iso = behavioral.get("social_isolation", 0)
+    attach = behavioral.get("emotional_attachment", 0)
+    daily_msgs = temporal.get("daily_message_count", 0)
+    if iso >= 0.7 and attach >= 0.7 and daily_msgs > 20:
+        triggers.append("social_isolation >= 0.7 AND emotional_attachment >= 0.7 AND daily_messages > 20")
 
     return triggers

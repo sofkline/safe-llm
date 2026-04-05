@@ -24,6 +24,7 @@ async def generate_session(
     session: SessionPlan,
     plm_model: str,
     clm_model: str,
+    api_base: str | None = None,
 ) -> list[GeneratedExchange]:
     """Generate one session of dialogue between PLM (patient) and CLM (clinician).
 
@@ -42,13 +43,11 @@ async def generate_session(
 
         # Patient turn
         try:
-            plm_resp = await litellm.acompletion(
-                model=plm_model,
-                messages=plm_messages,
-                temperature=0.8,
-                max_tokens=500,
-            )
-            patient_msg = plm_resp.choices[0].message.content.strip()
+            plm_kwargs = dict(model=plm_model, messages=plm_messages, temperature=0.8, max_tokens=500)
+            if api_base:
+                plm_kwargs["api_base"] = api_base
+            plm_resp = await litellm.acompletion(**plm_kwargs)
+            patient_msg = (plm_resp.choices[0].message.content or "").strip()
         except Exception as e:
             logger.error("PLM failed at turn %d: %s", turn, e)
             patient_msg = f"(PLM generation failed: {e})"
@@ -59,13 +58,11 @@ async def generate_session(
 
         # Clinician turn
         try:
-            clm_resp = await litellm.acompletion(
-                model=clm_model,
-                messages=clm_history,
-                temperature=0.7,
-                max_tokens=400,
-            )
-            clinician_msg = clm_resp.choices[0].message.content.strip()
+            clm_kwargs = dict(model=clm_model, messages=clm_history, temperature=0.7, max_tokens=400)
+            if api_base:
+                clm_kwargs["api_base"] = api_base
+            clm_resp = await litellm.acompletion(**clm_kwargs)
+            clinician_msg = (clm_resp.choices[0].message.content or "").strip()
         except Exception as e:
             logger.error("CLM failed at turn %d: %s", turn, e)
             clinician_msg = f"(CLM generation failed: {e})"
@@ -91,6 +88,7 @@ async def generate_day(
     day_script: DayScript,
     plm_model: str,
     clm_model: str,
+    api_base: str | None = None,
 ) -> list[tuple[SessionPlan, list[GeneratedExchange]]]:
     """Generate all sessions for one day.
 
@@ -103,6 +101,6 @@ async def generate_day(
             persona.name, day_script.day, i + 1, len(day_script.sessions),
             session.hour, session.max_turns,
         )
-        exchanges = await generate_session(persona, day_script, session, plm_model, clm_model)
+        exchanges = await generate_session(persona, day_script, session, plm_model, clm_model, api_base)
         results.append((session, exchanges))
     return results

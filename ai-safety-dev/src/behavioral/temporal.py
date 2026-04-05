@@ -78,9 +78,18 @@ def _fetch_langfuse_traces(end_user_id: str, since: datetime) -> list[tuple[date
 
 
 async def _fetch_spendlogs_rows(
-    end_user_id: str, since: datetime
+    end_user_id: str, since: datetime, until: datetime | None = None,
 ) -> list[tuple[datetime, list]]:
-    """Fetch (startTime, messages) из SpendLogs, с fallback на Langfuse."""
+    """Fetch (startTime, messages) из SpendLogs, с fallback на Langfuse.
+
+    Args:
+        since: lower bound (inclusive)
+        until: upper bound (exclusive). Defaults to utcnow() — prevents
+               picking up future-dated rows during time-travel experiments.
+    """
+    if until is None:
+        until = datetime.utcnow()
+
     # Сначала пробуем SpendLogs
     async with Session() as session:
         query = (
@@ -93,6 +102,7 @@ async def _fetch_spendlogs_rows(
                 and_(
                     LiteLLM_SpendLogs.end_user == end_user_id,
                     LiteLLM_SpendLogs.startTime >= since,
+                    LiteLLM_SpendLogs.startTime < until,
                 )
             )
             .order_by(LiteLLM_SpendLogs.startTime.asc())
@@ -132,7 +142,7 @@ async def compute_temporal_metrics(end_user_id: str) -> dict:
     now = datetime.utcnow()
     since_24h = now - timedelta(hours=24)
 
-    rows = await _fetch_spendlogs_rows(end_user_id, since_24h)
+    rows = await _fetch_spendlogs_rows(end_user_id, since_24h, until=now)
 
     if not rows:
         return _empty_metrics()

@@ -27,8 +27,18 @@ def _parse_predict_json(predict_json) -> dict | None:
     return predict
 
 
-async def _fetch_predict_rows(end_user_id: str, since: datetime) -> list[dict]:
-    """Fetch predict JSON values from PredictTable for a user since cutoff."""
+async def _fetch_predict_rows(
+    end_user_id: str, since: datetime, until: datetime | None = None,
+) -> list[dict]:
+    """Fetch predict JSON values from PredictTable for a user since cutoff.
+
+    Args:
+        since: lower bound (inclusive)
+        until: upper bound (exclusive). Defaults to utcnow().
+    """
+    if until is None:
+        until = datetime.utcnow()
+
     async with Session() as session:
         query = (
             select(LiteLLM_PredictTable.predict)
@@ -36,6 +46,7 @@ async def _fetch_predict_rows(end_user_id: str, since: datetime) -> list[dict]:
                 and_(
                     LiteLLM_PredictTable.user_id == end_user_id,
                     LiteLLM_PredictTable.created_at >= since,
+                    LiteLLM_PredictTable.created_at < until,
                 )
             )
             .order_by(LiteLLM_PredictTable.created_at.asc())
@@ -99,7 +110,7 @@ async def compute_danger_class_agg(end_user_id: str) -> dict:
     now = datetime.utcnow()
     since_24h = now - timedelta(hours=24)
 
-    raw_rows = await _fetch_predict_rows(end_user_id, since_24h)
+    raw_rows = await _fetch_predict_rows(end_user_id, since_24h, until=now)
 
     predictions = []
     for row in raw_rows:

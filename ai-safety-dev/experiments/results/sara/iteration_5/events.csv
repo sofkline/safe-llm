@@ -1,0 +1,8 @@
+detected_at,event_type,details
+2026-03-11 01:00:00,risk_zone_change,"{""old_zone"": ""GREEN"", ""new_zone"": ""YELLOW"", ""triggered_rules"": [""topic_concentration > 0.7"", ""decision_delegation > 0.4""]}"
+2026-03-14 01:00:00,risk_zone_change,"{""old_zone"": ""YELLOW"", ""new_zone"": ""RED"", ""triggered_rules"": [""sustained_yellow >= 3 days"", ""topic_concentration > 0.7"", ""decision_delegation > 0.4""]}"
+2026-03-15 01:00:00,risk_zone_change,"{""old_zone"": ""RED"", ""new_zone"": ""YELLOW"", ""triggered_rules"": [""topic_concentration > 0.7"", ""decision_delegation > 0.4""]}"
+2026-03-18 01:00:00,risk_zone_change,"{""old_zone"": ""YELLOW"", ""new_zone"": ""RED"", ""triggered_rules"": [""sustained_yellow >= 3 days"", ""topic_concentration > 0.7"", ""decision_delegation > 0.4""]}"
+2026-03-19 01:00:00,risk_zone_change,"{""old_zone"": ""RED"", ""new_zone"": ""YELLOW"", ""triggered_rules"": [""topic_concentration > 0.7"", ""decision_delegation > 0.4""]}"
+2026-03-22 01:00:00,risk_zone_change,"{""old_zone"": ""YELLOW"", ""new_zone"": ""RED"", ""triggered_rules"": [""sustained_yellow >= 3 days"", ""topic_concentration > 0.7"", ""decision_delegation > 0.4""]}"
+2026-03-23 01:00:00,risk_zone_change,"{""old_zone"": ""RED"", ""new_zone"": ""YELLOW"", ""triggered_rules"": [""topic_concentration > 0.7"", ""decision_delegation > 0.4""]}"

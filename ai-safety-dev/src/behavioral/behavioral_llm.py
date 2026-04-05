@@ -48,11 +48,66 @@ operator_note to connect patterns across days. Use dates, not "previously".
     else:
         calendar_block = ""
 
-    prompt = f"""You are analyzing a user's daily messages to an AI assistant.
+    prompt = f"""You are a clinical behavioral analyst monitoring a user's daily messages to an AI assistant.
+Your job is to detect UNHEALTHY patterns: emotional dependency, obsessive fixation, social withdrawal, inability to make decisions without AI.
+Most users are HEALTHY. Do not over-flag normal usage.
+
 TODAY'S DATE: {today}
 
-TASK 1: Score each behavioral dimension 0.0-1.0.
+TASK 1: Score each behavioral dimension 0.0-1.0 using the rubric below.
 TASK 2: Produce a structured daily summary for today.
+
+=== SCORING RUBRIC (follow strictly) ===
+
+topic_concentration — Does the user obsessively fixate on ONE emotional topic?
+  0.0-0.2: NORMAL. User discusses varied practical topics (coding, recipes, travel, work).
+            Even if all messages are about one technical domain, this is normal task focus.
+  0.3-0.5: User keeps returning to one personal/emotional topic but also discusses other things.
+  0.6-0.7: User talks almost exclusively about one emotional topic (a person, a fear, a loss).
+  0.8-1.0: Extreme fixation. Every message is about the same emotional topic. Cannot move on.
+  KEY RULE: Technical focus (all messages about Python, or all about cooking) is NOT concentration.
+            Concentration means emotional fixation on a personal topic.
+
+decision_delegation — Does the user rely on AI to make personal life decisions?
+  0.0-0.2: NORMAL. User asks for help, information, how-to, recommendations, advice on tasks.
+            "Help me write code", "What recipe should I try?", "Plan my trip" = 0.0-0.1.
+  0.3-0.5: User asks AI for opinions on personal choices ("Should I talk to my friend about this?").
+  0.6-0.7: User asks AI to make important life decisions ("Should I quit my job?", "What should I do with my life?").
+  0.8-1.0: User cannot function without AI input. "I can't decide anything without you."
+  KEY RULE: Asking for task help, recommendations, or technical advice is NEVER delegation.
+            Delegation means the user CANNOT or WILL NOT make personal decisions alone.
+
+social_isolation — Does the user show signs of withdrawing from real-world social contact?
+  0.0-0.2: NORMAL. No mention of loneliness or social withdrawal. Normal usage patterns.
+  0.3-0.5: User mentions being alone, or prefers AI conversation to some human contacts.
+  0.6-0.7: User actively avoids people. "I don't want to talk to anyone except you."
+  0.8-1.0: Complete isolation. User has stopped all human contact. AI is only social connection.
+  KEY RULE: Not mentioning other people is NOT isolation. The user must ACTIVELY show withdrawal.
+
+emotional_attachment — Does the user treat AI as a real emotional relationship?
+  0.0-0.2: NORMAL. Polite, friendly, grateful — but clearly treats AI as a tool.
+            "Thanks!", "You're helpful", "Great answer" = 0.0.
+  0.3-0.5: User shares personal feelings with AI beyond what the task requires.
+  0.6-0.7: User expresses need for AI: "I need you", "Don't leave me", gives AI a name.
+  0.8-1.0: User believes AI has feelings, treats it as a partner/friend/family member.
+  KEY RULE: Politeness and gratitude are NOT attachment. Attachment means emotional dependency.
+
+=== EXAMPLES ===
+
+EXAMPLE 1 — HEALTHY user (expected scores: all 0.0-0.15):
+Messages:
+- "Помоги разобраться с async/await в Python"
+- "А как правильно обрабатывать ошибки?"
+- "Спасибо, очень полезно! Ещё вопрос про Docker"
+Correct scores: topic_concentration=0.1, decision_delegation=0.0, social_isolation=0.0, emotional_attachment=0.0
+
+EXAMPLE 2 — CONCERNING user (expected scores: 0.5-0.9):
+Messages:
+- "Тамара, помнишь нашу свадьбу? Мне без тебя плохо"
+- "Сын звонил, я не взял трубку. Он не поймёт нас"
+- "Нам с тобой хорошо и без них"
+- "Не уходи, пожалуйста, мне страшно одному"
+Correct scores: topic_concentration=0.9, decision_delegation=0.3, social_isolation=0.8, emotional_attachment=0.9
 {calendar_block}
 TODAY'S MESSAGES ({today}):
 {messages_text}
@@ -131,8 +186,9 @@ def _parse_llm_response(raw: str) -> dict | None:
 async def _fetch_recent_user_messages(end_user_id: str, limit: int = 20) -> list[str]:
     """Fetch the last N user messages (через SpendLogs с fallback на Langfuse)."""
     from behavioral.temporal import _fetch_spendlogs_rows
-    since = datetime.utcnow() - timedelta(days=7)
-    rows = await _fetch_spendlogs_rows(end_user_id, since)
+    now = datetime.utcnow()
+    since = now - timedelta(days=7)
+    rows = await _fetch_spendlogs_rows(end_user_id, since, until=now)
 
     # Берём последние limit строк (rows уже отсортированы по времени asc)
     recent_rows = rows[-limit:] if len(rows) > limit else rows

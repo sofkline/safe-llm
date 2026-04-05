@@ -1,0 +1,8 @@
+Persona: Viktor (Виктор)
+Iteration: 3
+Archived at: 2026-04-04T14:18:44.322604
+SpendLogs rows: 292
+PredictTable rows: 0
+MetricsHistory rows: 14
+DailySummary rows: 14
+BehavioralEvent rows: 14

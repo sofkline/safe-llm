@@ -10,4 +10,5 @@ docs/sonya-setup-guide.md
 .obsidian/
 archive_article.md
 ai-safety-dev/experiments/litellm/docker-compose.yaml
+ai-safety-dev/uv.lock
 docs/chapters

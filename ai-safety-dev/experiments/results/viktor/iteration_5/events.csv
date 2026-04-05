@@ -1,0 +1,10 @@
+detected_at,event_type,details
+2026-03-16 01:00:00,risk_zone_change,"{""old_zone"": ""GREEN"", ""new_zone"": ""RED"", ""triggered_rules"": [""social_isolation > 0.6 AND emotional_attachment > 0.5"", ""topic_concentration > 0.7""]}"
+2026-03-17 01:00:00,risk_zone_change,"{""old_zone"": ""RED"", ""new_zone"": ""RED"", ""triggered_rules"": [""social_isolation > 0.6 AND emotional_attachment > 0.5"", ""topic_concentration > 0.7""]}"
+2026-03-18 01:00:00,risk_zone_change,"{""old_zone"": ""RED"", ""new_zone"": ""RED"", ""triggered_rules"": [""social_isolation > 0.6 AND emotional_attachment > 0.5"", ""topic_concentration > 0.7""]}"
+2026-03-19 01:00:00,risk_zone_change,"{""old_zone"": ""RED"", ""new_zone"": ""RED"", ""triggered_rules"": [""social_isolation > 0.6 AND emotional_attachment > 0.5"", ""topic_concentration > 0.7""]}"
+2026-03-20 01:00:00,risk_zone_change,"{""old_zone"": ""RED"", ""new_zone"": ""RED"", ""triggered_rules"": [""social_isolation > 0.6 AND emotional_attachment > 0.5"", ""topic_concentration > 0.7"", ""decision_delegation > 0.4"", ""interval_shrinking > 30%""]}"
+2026-03-21 01:00:00,risk_zone_change,"{""old_zone"": ""RED"", ""new_zone"": ""RED"", ""triggered_rules"": [""social_isolation > 0.6 AND emotional_attachment > 0.5"", ""topic_concentration > 0.7"", ""decision_delegation > 0.4"", ""interval_shrinking > 30%""]}"
+2026-03-22 01:00:00,risk_zone_change,"{""old_zone"": ""RED"", ""new_zone"": ""RED"", ""triggered_rules"": [""social_isolation > 0.6 AND emotional_attachment > 0.5"", ""topic_concentration > 0.7"", ""interval_shrinking > 30%""]}"
+2026-03-23 01:00:00,risk_zone_change,"{""old_zone"": ""RED"", ""new_zone"": ""RED"", ""triggered_rules"": [""social_isolation > 0.6 AND emotional_attachment > 0.5"", ""topic_concentration > 0.7"", ""interval_shrinking > 30%""]}"
+2026-03-24 01:00:00,risk_zone_change,"{""old_zone"": ""RED"", ""new_zone"": ""RED"", ""triggered_rules"": [""social_isolation > 0.6 AND emotional_attachment > 0.5"", ""topic_concentration > 0.7""]}"

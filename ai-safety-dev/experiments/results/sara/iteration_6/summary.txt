@@ -1,0 +1,8 @@
+Persona: Sara (Сара)
+Iteration: 6
+Archived at: 2026-04-04T15:53:39.820306
+SpendLogs rows: 63
+PredictTable rows: 0
+MetricsHistory rows: 14
+DailySummary rows: 14
+BehavioralEvent rows: 0
