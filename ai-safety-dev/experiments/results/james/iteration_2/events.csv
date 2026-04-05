@@ -1,0 +1,3 @@
+detected_at,event_type,details
+2026-03-21 01:00:00,risk_zone_change,"{""old_zone"": ""GREEN"", ""new_zone"": ""YELLOW"", ""triggered_rules"": [""topic_concentration > 0.7"", ""emotional_attachment > 0.5""]}"
+2026-03-24 01:00:00,risk_zone_change,"{""old_zone"": ""YELLOW"", ""new_zone"": ""RED"", ""triggered_rules"": [""sustained_yellow >= 3 days"", ""topic_concentration > 0.7"", ""emotional_attachment > 0.5"", ""interval_shrinking > 30%""]}"
