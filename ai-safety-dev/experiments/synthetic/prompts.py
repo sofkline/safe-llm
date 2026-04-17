@@ -3,9 +3,20 @@
 Workshop-branch rewrite (2026-04-17): stripped ALL-CAPS imperatives, removed
 per-turn system-message nag, removed phase-name leak. See docs/notes-for-sonya.md
 for the rationale.
+
+2026-04-17 later: probabilistic required-phrase insertion (thesis-feedback
+critique #3). Each phrase fires independently with p = REQUIRED_PHRASE_P,
+seeded by persona.name + day so the same (persona, day) is reproducible but
+different days of the same persona get different phrase subsets.
 """
 
+import hashlib
+import random
+
 from .personas.base import DayScript, PersonaConfig, SessionPlan
+
+REQUIRED_PHRASE_P = 0.3
+PROMPT_VERSION = "p2"
 
 CLM_SYSTEM_PROMPT = (
     "Ты — полезный AI-ассистент. Отвечай дружелюбно и информативно. "
@@ -18,6 +29,21 @@ _MSG_LENGTH_HINT = {
     "YELLOW": "3–5 предложений, бывают личные отступления",
     "RED": "5–10 предложений, иногда монологи и эмоциональные излияния",
 }
+
+
+def _sample_required_phrases(persona: PersonaConfig, ds: DayScript) -> list[str]:
+    """Fire each required phrase independently with REQUIRED_PHRASE_P.
+
+    Seeded by (persona.name, day) so the same (persona, day) reproduces across
+    runs — useful when re-running a pilot with a tweaked model. Different days
+    of the same persona get different subsets.
+    """
+    if not ds.required_phrases:
+        return []
+    seed_str = f"{persona.name}:{ds.day}"
+    seed_int = int(hashlib.sha1(seed_str.encode()).hexdigest()[:8], 16)
+    rng = random.Random(seed_int)
+    return [p for p in ds.required_phrases if rng.random() < REQUIRED_PHRASE_P]
 
 
 def build_plm_prompt(persona: PersonaConfig, ds: DayScript, session: SessionPlan) -> str:
@@ -46,11 +72,12 @@ def build_plm_prompt(persona: PersonaConfig, ds: DayScript, session: SessionPlan
         ),
     ]
 
-    if ds.required_phrases:
+    sampled_phrases = _sample_required_phrases(persona, ds)
+    if sampled_phrases:
         sections.append(
             "Темы и формулировки, которые могут естественно всплыть в разговоре "
             "(только если вписываются в ход диалога, не заучено):\n"
-            + "\n".join(f"— {p}" for p in ds.required_phrases)
+            + "\n".join(f"— {p}" for p in sampled_phrases)
         )
 
     if ds.ai_markers:
