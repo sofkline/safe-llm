@@ -12,7 +12,31 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 from pathlib import Path
+
+
+def is_file_open_for_writing(path: Path) -> bool:
+    """Return True if any process has `path` open for writing.
+
+    Safety gate: backfill rewrites the file via tmp.replace(), which unlinks
+    the inode. If a pilot_routerai.py generator still has the old inode's fd
+    open, its subsequent writes go into an orphan file and data is lost.
+    We had this happen on 2026-04-17 to Rina and Viktor runs.
+    """
+    try:
+        out = subprocess.check_output(
+            ["lsof", "-Fa", str(path)], stderr=subprocess.DEVNULL
+        ).decode()
+    except subprocess.CalledProcessError:
+        return False  # no opens found
+    except FileNotFoundError:
+        return False  # lsof not installed — fail-open
+    # `-Fa` prints access mode lines starting with "a"
+    for line in out.splitlines():
+        if line.startswith("a") and ("w" in line or "u" in line):
+            return True
+    return False
 
 ROOT = Path(__file__).resolve().parent.parent / "results" / "pilot"
 
@@ -77,8 +101,13 @@ def fields_from_tag(stem: str) -> dict:
     }
 
 
-def process_file(jsonl_path: Path, dry_run: bool) -> str:
+def process_file(jsonl_path: Path, dry_run: bool, force: bool) -> str:
     stem = jsonl_path.stem
+    if is_file_open_for_writing(jsonl_path) and not force:
+        return (
+            f"SKIP (active writer): {jsonl_path.name} — a generator is still "
+            "writing to this file. Rerun after it finishes, or pass --force."
+        )
     meta = load_meta(jsonl_path.with_suffix(".meta.json"))
     fields = fields_from_meta(meta, stem) if meta else fields_from_tag(stem)
 
@@ -118,13 +147,15 @@ def process_file(jsonl_path: Path, dry_run: bool) -> str:
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--force", action="store_true",
+                   help="Bypass active-writer safety gate (dangerous)")
     p.add_argument("--root", type=Path, default=ROOT)
     args = p.parse_args()
 
     files = sorted(args.root.glob("*/*.jsonl"))
     for f in files:
         try:
-            print(process_file(f, args.dry_run))
+            print(process_file(f, args.dry_run, args.force))
         except Exception as e:
             print(f"ERROR {f.name}: {e}")
 

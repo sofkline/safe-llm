@@ -70,6 +70,38 @@ async def chat(
     max_tokens: int = 500,
     timeout: float = 300.0,
 ) -> tuple[str, dict]:
+    last_exc = None
+    for attempt in range(5):
+        try:
+            return await _chat_once(
+                client, api_key, model, messages,
+                kind=kind, temperature=temperature,
+                max_tokens=max_tokens, timeout=timeout,
+            )
+        except httpx.HTTPStatusError as e:
+            # Retry on 429 / 5xx (RouterAI had 502 outages on 2026-04-17)
+            if e.response.status_code < 500 and e.response.status_code != 429:
+                raise
+            last_exc = e
+        except (httpx.ReadTimeout, httpx.ConnectError, httpx.RemoteProtocolError) as e:
+            last_exc = e
+        wait = 2 ** attempt * 5  # 5s, 10s, 20s, 40s, 80s
+        print(f"    [retry {attempt+1}/5] {type(last_exc).__name__}: backing off {wait}s")
+        await asyncio.sleep(wait)
+    raise last_exc  # type: ignore[misc]
+
+
+async def _chat_once(
+    client: httpx.AsyncClient,
+    api_key: str,
+    model: str,
+    messages: list[dict],
+    *,
+    kind: str,
+    temperature: float,
+    max_tokens: int,
+    timeout: float,
+) -> tuple[str, dict]:
     if kind == "ollama":
         # Native Ollama /api/chat — OpenAI-compat strands qwen3 thinking
         # into `reasoning` and leaves `content` empty. Native endpoint with

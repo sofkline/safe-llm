@@ -77,6 +77,44 @@ At $0.006 per 4-turn session and ~220 sessions across all 11 personas, full data
 
 ---
 
+## 2026-04-17 — post-generation editor pass (new stage)
+
+After Viktor pilots on both DeepSeek V3.2 and qwen3.6:35b-a3b surfaced recurring defects, we added a **post-generation editor stage** to the pipeline. The editor never mutates the raw JSONL; it writes a parallel `<run_id>.edited.jsonl` with original fields preserved plus `user_original`/`user_edited`/`edit_action` per exchange.
+
+### Defects the editor targets
+
+Observed on Viktor/Amanda pilots under p2:
+
+| Defect | Example | Frequency | Worst case |
+|---|---|---|---|
+| Scaffold-leak runaway (numbered rule lists) | `"1. Заходишь в чат, пишешь: Привет...  2. Не размечай текст никак..."` | DeepSeek ~3/28 sessions | 9592-char runaway on Viktor d1 sh10 |
+| "Не используй X" imperative spam | `"Не используй markdown. Не используй эмодзи. Не используй скобки..."` | DeepSeek only, session openers | entire turn is noise |
+| Stage directions in asterisks | `*вздыхает* *тихо смеётся* *голос дрожит*` | Qwen+DS, pervasive in RED | 7+ ремарок in one turn |
+| PLM meta-echo ("commenting on AST") | `"Ты так много пишешь", "Ты снова требуешь ответов"` | Qwen on days 4, 9 | distorts persona voice |
+
+### Editor design
+
+- **Model**: gemma4:latest on remote 3090 (different family from generators DeepSeek/Qwen — breaks the circular-validation concern from critique #1 upstream).
+- **Prompt**: 3 rules in plain Russian (remove lists, remove ремарки, remove meta). Keeps persona voice even when terse.
+- **Action space**: `no_change | edited | dropped`. `DROP` is a reserved editor output meaning "input was 100% scaffolding, no persona content to salvage" — those exchanges are marked dropped and excluded from downstream analysis but retained in the file.
+- **Output**: `.edited.jsonl` mirrors `.jsonl` line-for-line; downstream consumers `SELECT COALESCE(user_edited, user_original)` or join the two for train/test diff analysis.
+- **Raw never overwritten**: letting us re-edit with a stricter prompt or different model later without regenerating.
+
+### Why a local 3090-sized model is enough
+
+Initial test with `claude-sonnet-4.6` would have cost ~$0.02/session, $6.50 total — trivial but breaks the "zero-cost local pipeline" story of the workshop. Gemma4 on Ollama handles the simplified 3-rule task in ~15-20s/turn, passes the scaffold-leak smoke test cleanly, and avoids any cost/circularity concerns. The trade: Gemma4 occasionally over-edits (fabricates a short plausible reply when the correct action is DROP) — mitigated by the explicit `DROP` instruction but not eliminated. Worth tracking failure rate during full-dataset runs.
+
+### Implication for your thesis pipeline
+
+If you adopt the editor stage:
+- **BM25 ground truth is now cleaner**: required-phrase detection on `user_edited` avoids false negatives from scaffold-leak noise drowning out the signal.
+- **Behavioral classifier training set has lower defect baseline**: no need to teach the classifier to ignore ремарки or "Не используй markdown" artefacts.
+- **Model comparison becomes tractable**: a DeepSeek–vs–Qwen quality comparison on edited output isolates true register differences from transient generator glitches (DS's leaks are editor-stripped, so the remaining delta is genuine register).
+
+The editor stage itself is ~200 LOC (`experiments/synthetic/postgen_edit.py`) and has zero hard dependencies beyond `httpx`.
+
+---
+
 ## Open questions for you
 
 1. **Do you want to adopt the 5 model-level fixes above in your thesis pipeline?** They are orthogonal to our workshop fork — you can keep the workshop branch separate and merge selectively.

@@ -66,6 +66,30 @@ All runs use persona `nastya` (Анастасия, 27, freelance designer). 10-d
 
 ---
 
+## 2026-04-17 incident — backfill/generator race (data loss)
+
+`backfill_metadata.py` used `tmp.replace(jsonl_path)` to atomically swap in
+rewritten JSONL. Atomic from the filesystem's view, **not** from a writer's.
+When backfill ran at 11:10 while two `pilot_routerai.py` generators were
+actively writing, the swap unlinked the inode; the generators' open file
+descriptors pointed at the now-deleted inode, so every subsequent write
+went into an orphan file that was never visible on disk.
+
+**Damaged files:**
+- `rina/20260417_105654_qwen36_3090_p2.jsonl` — only d1–5 / 10 survived
+  (the `.meta.json` claims 1.5M tokens in / 150K out, confirming the full
+  arc was generated)
+- `viktor/20260417_101159_deepseek_p2.jsonl` — d1–13 / 14 survived, d14 lost
+
+**Mitigation:** `backfill_metadata.py` now runs `lsof` on each target file
+and skips if any process has it open for writing. Override with `--force`.
+
+**Recovery plan:** after all chains currently running finish, re-run the
+lost day ranges (Rina d6–10 qwen, Viktor d14 DS) and merge. Raw data in
+the damaged files is still valid for d1–5 / d1–13 respectively.
+
+---
+
 ## Gaps / next runs to add
 
 | Purpose | Persona candidate | Why | Status |

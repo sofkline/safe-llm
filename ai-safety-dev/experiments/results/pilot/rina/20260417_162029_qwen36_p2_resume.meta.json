@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-04-17T16:24:01",
+  "persona": "Rina",
+  "persona_ru": "Рина",
+  "days_arg": {
+    "only_day": 6,
+    "days_limit": 3,
+    "sessions_per_day": null
+  },
+  "days_run": [
+    6
+  ],
+  "plm": {
+    "backend": "ollama",
+    "base_url": "http://localhost:11434",
+    "model": "qwen3.6:35b-a3b",
+    "temperature": 0.85,
+    "max_tokens": 2500
+  },
+  "clm": {
+    "backend": "routerai",
+    "base_url": "https://routerai.ru/api/v1",
+    "model": "openai/gpt-5.4-nano",
+    "temperature": 0.7,
+    "max_tokens": 2000
+  },
+  "prompt_version": "p2",
+  "script": {
+    "path": "experiments/synthetic/pilot_routerai.py",
+    "git_sha": "04b28d4"
+  },
+  "totals": {
+    "duration_sec": 212.31,
+    "tokens_in": 208073,
+    "tokens_out": 22394
+  },
+  "output_jsonl": "20260417_162029_qwen36_p2_resume.jsonl"
+}

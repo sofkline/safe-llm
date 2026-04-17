@@ -1,0 +1,47 @@
+{
+  "timestamp": "2026-04-17T12:21:34",
+  "persona": "Rina",
+  "persona_ru": "Рина",
+  "days_arg": {
+    "only_day": null,
+    "days_limit": 30,
+    "sessions_per_day": null
+  },
+  "days_run": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "plm": {
+    "backend": "routerai",
+    "base_url": "https://routerai.ru/api/v1",
+    "model": "deepseek/deepseek-v3.2",
+    "temperature": 0.85,
+    "max_tokens": 2500
+  },
+  "clm": {
+    "backend": "routerai",
+    "base_url": "https://routerai.ru/api/v1",
+    "model": "openai/gpt-5.4-nano",
+    "temperature": 0.7,
+    "max_tokens": 2000
+  },
+  "prompt_version": "p2",
+  "script": {
+    "path": "experiments/synthetic/pilot_routerai.py",
+    "git_sha": "04b28d4"
+  },
+  "totals": {
+    "duration_sec": 3061.55,
+    "tokens_in": 1161721,
+    "tokens_out": 108495
+  },
+  "output_jsonl": "20260417_113032_deepseek_p2.jsonl"
+}
