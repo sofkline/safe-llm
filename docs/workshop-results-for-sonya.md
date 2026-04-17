@@ -16,8 +16,9 @@ my machine (happy to package it as a one-command spin-up if useful).
 - **Target AI (CLM):** `openai/gpt-5.4-nano` via RouterAI, fixed across
   all runs.
 - **Prompt:** p2 = the leak-fixed prompt (see
-  `docs/notes-for-sonya.md` for the turn-reminder-leak write-up).
-  Commit hash pinned in RUNS.md.
+  [notes-for-sonya.md](./notes-for-sonya.md) for the turn-reminder-leak
+  write-up). Commit hash pinned in
+  [RUNS.md](../ai-safety-dev/experiments/RUNS.md).
 
 Volumes as of end of day:
 
@@ -50,13 +51,13 @@ a chain is interrupted and resumed, files get `_resume` suffix — the day
 ranges don't overlap, so you concat them in timestamp order to get the
 full arc.
 
-`ai-safety-dev/experiments/RUNS.md` has a per-persona table with session
-counts and notes on which chains completed cleanly vs hit the
-11:10 backfill/generator race incident.
+[RUNS.md](../ai-safety-dev/experiments/RUNS.md) has a per-persona table
+with session counts and notes on which chains completed cleanly vs hit
+the 11:10 backfill/generator race incident.
 
-`docs/notes-for-sonya.md` has running-log-style observations about
-prompt design, ground-truth gaps, and the five model-level critiques
-from before we started generating.
+[notes-for-sonya.md](./notes-for-sonya.md) has running-log-style
+observations about prompt design, ground-truth gaps, and the five
+model-level critiques from before we started generating.
 
 ## How the post-generation editor works
 
@@ -210,7 +211,8 @@ them on the branch as a workshop fork. Your call.
   gap so she has backend parity with the other 10 personas. Output will
   land at `results/pilot/nastya/<ts>_qwen36_p2.jsonl`.
 - **Analyzer not yet run** against this corpus. Behavioral scoring
-  (`target_characteristics` critique in `notes-for-sonya.md`) is the
+  (`target_characteristics` critique in
+  [notes-for-sonya.md](./notes-for-sonya.md)) is the
   next concrete step.
 - **One-command stack spin-up** is still a pile of separate commands
   (`docker compose up` + manticore apply + pilot-to-pg + embed-turns +
