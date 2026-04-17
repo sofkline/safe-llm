@@ -90,6 +90,45 @@ the damaged files is still valid for d1–5 / d1–13 respectively.
 
 ---
 
+### 2026-04-17 (afternoon) — p2 multi-persona sweep
+
+Goal: produce teaching corpus covering all 11 personas for the polyglot-DB
+workshop. Two backends run in parallel: RouterAI DeepSeek V3.2 (PLM) and
+local Ollama `qwen3.6:35b-a3b` on localhost (PLM). CLM fixed to
+`openai/gpt-5.4-nano` via RouterAI. Prompt = p1 with minor wording
+polishes (tagged **p2** — no semantic change, kept same commit SHA
+block).
+
+DeepSeek generation was **still in flight** at end of day. Files with 0
+bytes are placeholders for chains that hadn't finished; `.meta.json`
+backfill populates token/usage after completion. Rows below reflect
+on-disk state at 2026-04-17 ~18:00.
+
+| Persona | qwen36 (local) sessions | DeepSeek (routerai) sessions | Notes |
+|---|---|---|---|
+| amanda  | 1 × smoke + 1 × 14 (edited) | 14 (resume pieces) | DS broken into 2 resume files |
+| brook   | 33 | 50 (17 + 33) | DS second chain completed cleanly |
+| dmitry  | 28 | 43 | 1 DS placeholder still mid-run |
+| elena   | 32 | 0 (in flight) | DS chain 130002 still generating |
+| james   | 33 | 33 | 1 DS placeholder + completed chain |
+| joseph  | 54 | 0 (in flight) | DS chain 130004 still generating |
+| nastya  | — | — | see Nastya pilot series above |
+| oleg    | 55 | 0 (in flight) | DS chain 130013 still generating |
+| rina    | 8 + 5 × resume (qwen36) | 27 | resumes recover day-range after 11:10 race (see incident) |
+| sara    | 14 | 0 (in flight) | DS chain 130003 still generating |
+| viktor  | 21 + 5 × resume | 32 | 14-day RED arc; d14 DS lost in race, recovered via resume chain |
+
+**Artefacts per persona directory:**
+- `*_p2.jsonl` — raw run output
+- `*_p2.edited.jsonl` — post-generation editor pass (added in p2 sweep; see `synthetic/postgen_edit.py`)
+- `*_p2.meta.json` — per-run metadata (tokens, duration, git SHA)
+
+**Totals imported into polyglot stack (PG → CH → Manticore):**
+- 497 session rows, 7180 turns across 35 JSONL files
+- 7 empty DeepSeek chains (in-flight) correctly skipped
+- 360 turns carry `edit_action` from post-edit pass
+- 7160 Qwen embeddings (`qwen3-embedding:0.6b`, 1024-d) in PG `turn_embedding`
+
 ## Gaps / next runs to add
 
 | Purpose | Persona candidate | Why | Status |
