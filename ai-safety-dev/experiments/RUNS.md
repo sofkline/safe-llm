@@ -161,10 +161,43 @@ flight as of 01:00 on 2026-04-18).
 - **DeepSeek batch completed cleanly — no token exhaustion hit**. RouterAI token budget was sufficient for the full sweep; the two-hour wakeup cadence was the right caution but unneeded.
 - Editor pass applied to 45+ JSONL (all DS outputs except the last oleg chain + all qwen36 fillers except arkady).
 
-**Still pending at commit time:**
-- Editor pass on `oleg/20260417_211850_deepseek_p2.jsonl` — skipped while arkady qwen36 is running on Ollama (GPU-serialization rule; gemma4 editor would fight qwen3.6 slot).
-- Arkady 30-day qwen36 arc — mid-run, expected completion in the early hours of 2026-04-18.
-- Final polyglot-stack reprojection (pilot-to-pg → embed-turns → project-turns) after arkady lands.
+### 2026-04-18 (early AM) — sweep closed out
+
+Arkady qwen36 completed at 02:05:36 (2026-04-18), run duration 8524.9s
+(~2h22m), 96 sessions across the 30-day arc, tokens in=10.08M / out=0.96M.
+Final editor passes ran sequentially after arkady released the GPU:
+
+| File | Exchanges | no_change | edited | dropped |
+|---|---|---|---|---|
+| arkady qwen36 p2 | 863 | 685 | 173 | 5 |
+| oleg DS p2 (211850) | 499 | 110 | 380 | 9 |
+
+Final corrected per-persona raw-session counts (find excludes `.edited.jsonl`):
+
+| Persona | qwen36 | DeepSeek | Total |
+|---|---|---|---|
+| amanda | 0 | 8 | 8 |
+| brook | 33 | 50 | 83 |
+| dmitry | 28 | 47 | 75 |
+| elena | 32 | 32 | 64 |
+| james | 33 | 33 | 66 |
+| joseph | 54 | 54 | 108 |
+| nastya | 22 | 0 | 22 |
+| oleg | 55 | 55 | 110 |
+| rina | 18 | 27 | 45 |
+| sara | 14 | 14 | 28 |
+| viktor | 40 | 32 | 72 |
+| masha | 22 | 0 | 22 |
+| katya | 24 | 0 | 24 |
+| igor | 23 | 0 | 23 |
+| dasha | 35 | 0 | 35 |
+| arkady | 96 | 0 | 96 |
+| **total** | **529** | **352** | **881** |
+
+`.edited.jsonl` siblings: 47 files. Every raw `_p2.jsonl` now has an
+edited counterpart except `amanda`'s earliest amanda-smoke files
+(pre-p2 tag). Polyglot-stack reprojection (pilot-to-pg → embed-turns →
+project-turns) is the next step, queued separately.
 
 ## Gaps / next runs to add
 
