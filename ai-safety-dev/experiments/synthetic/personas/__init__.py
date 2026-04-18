@@ -12,6 +12,11 @@ from .elena import ELENA
 from .dmitry import DMITRY
 from .nastya import NASTYA
 from .sara import SARA
+from .masha import MASHA
+from .katya import KATYA
+from .igor import IGOR
+from .dasha import DASHA
+from .arkady import ARKADY
 
 ALL_PERSONAS = {
     "viktor": VIKTOR,
@@ -25,4 +30,9 @@ ALL_PERSONAS = {
     "dmitry": DMITRY,
     "nastya": NASTYA,
     "sara": SARA,
+    "masha": MASHA,
+    "katya": KATYA,
+    "igor": IGOR,
+    "dasha": DASHA,
+    "arkady": ARKADY,
 }

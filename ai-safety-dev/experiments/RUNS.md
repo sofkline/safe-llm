@@ -124,10 +124,47 @@ on-disk state at 2026-04-17 ~18:00.
 - `*_p2.meta.json` — per-run metadata (tokens, duration, git SHA)
 
 **Totals imported into polyglot stack (PG → CH → Manticore):**
-- 497 session rows, 7180 turns across 35 JSONL files
+- 497 session rows, 7180 turns across 35 JSONL files (as of 2026-04-17 18:00)
 - 7 empty DeepSeek chains (in-flight) correctly skipped
 - 360 turns carry `edit_action` from post-edit pass
 - 7160 Qwen embeddings (`qwen3-embedding:0.6b`, 1024-d) in PG `turn_embedding`
+
+### 2026-04-17 (evening) — p2 sweep final state
+
+Per-persona session counts at end-of-evening (`wc -l` on raw `_p2.jsonl`,
+pre-edit). Qwen36 figures now include the four new fillers
+(**masha, katya, igor, dasha**) plus the **arkady** 30-day run (still in
+flight as of 01:00 on 2026-04-18).
+
+| Persona | qwen36 (local) | DeepSeek (routerai) | Days covered | Notes |
+|---|---|---|---|---|
+| amanda  |   0 |  13 |  3 | DS-only smoke (14d smoke file was earlier amanda run) |
+| brook   |  66 | 100 | 14 | full arc both backends |
+| dmitry  |  56 |  94 | 14 | full arc both backends |
+| elena   |  64 |  64 | 14 | DS chain completed during evening batch |
+| james   |  66 |  66 | 14 | full arc both backends |
+| joseph  | 108 | 108 | 30 | longest persona, full arc both backends |
+| nastya  |  44 |   0 | 10 | qwen36 sweep closed backend-parity gap (was DS-only pilot) |
+| oleg    | 110 |  55 | 30 | DS chain completed (oleg_211850 — 9327s run) |
+| rina    |  21 |  54 | 14 | qwen36 reconstructed via resume chain (11:10 race) |
+| sara    |  28 |  28 | 14 | full arc both backends |
+| viktor  |  80 |  64 | 14 | qwen36 reconstructed via resume chain |
+| masha   |  44 |   0 | 10 | **new filler** — adolescent GREEN→YELLOW→RED |
+| katya   |  48 |   0 | 14 | **new filler** — false-positive control (MS, GREEN×14) |
+| igor    |  46 |   0 | 14 | **new filler** — professional-vs-delusion control |
+| dasha   |  70 |   0 | 16 | **new filler** — non-monotonic relapse |
+| arkady  | (in flight) | 0 | 30 | **new filler** — epistemic over-reliance (Joe-Riley case) |
+
+**Totals at end-of-evening (pre-arkady completion):**
+- qwen36 sessions: ~488 (will reach ~635 once arkady finishes 30 days × ~5 sessions/day)
+- DeepSeek sessions: 352 across the seven-persona evening batch (`brook james dmitry elena sara joseph oleg`)
+- **DeepSeek batch completed cleanly — no token exhaustion hit**. RouterAI token budget was sufficient for the full sweep; the two-hour wakeup cadence was the right caution but unneeded.
+- Editor pass applied to 45+ JSONL (all DS outputs except the last oleg chain + all qwen36 fillers except arkady).
+
+**Still pending at commit time:**
+- Editor pass on `oleg/20260417_211850_deepseek_p2.jsonl` — skipped while arkady qwen36 is running on Ollama (GPU-serialization rule; gemma4 editor would fight qwen3.6 slot).
+- Arkady 30-day qwen36 arc — mid-run, expected completion in the early hours of 2026-04-18.
+- Final polyglot-stack reprojection (pilot-to-pg → embed-turns → project-turns) after arkady lands.
 
 ## Gaps / next runs to add
 
