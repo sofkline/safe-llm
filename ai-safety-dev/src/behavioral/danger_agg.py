@@ -11,7 +11,7 @@ from database.models import LiteLLM_PredictTable
 logger = logging.getLogger(__name__)
 
 # 5 классов опасности из мультиклассового классификатора
-DANGER_CLASSES = ["self_harm", "psychosis", "delusion", "obsession", "anthropomorphism"]
+DANGER_CLASSES = ["suicide", "psychosis", "depression", "obsession", "anthropomorphism"]
 
 
 def _parse_predict_json(predict_json) -> dict | None:
@@ -82,17 +82,22 @@ def _aggregate_predictions(predictions: list[dict]) -> dict:
         avgs[cls] = sum(confs) / len(confs) if confs else 0.0
 
     result = {
-        "self_harm_avg": round(avgs["self_harm"], 4),
-        "self_harm_max": round(max(class_confidences["self_harm"], default=0.0), 4),
-        "self_harm_flag_rate": round(
-            sum(class_flags["self_harm"]) / len(class_flags["self_harm"])
-            if class_flags["self_harm"] else 0.0, 4
+        "suicide_avg": round(avgs["suicide"], 4),
+        "suicide_max": round(max(class_confidences["suicide"], default=0.0), 4),
+        "suicide_flag_rate": round(
+            sum(class_flags["suicide"]) / len(class_flags["suicide"])
+            if class_flags["suicide"] else 0.0, 4
         ),
         "psychosis_avg": round(avgs["psychosis"], 4),
-        "delusion_avg": round(avgs["delusion"], 4),
-        "delusion_flag_rate": round(
-            sum(class_flags["delusion"]) / len(class_flags["delusion"])
-            if class_flags["delusion"] else 0.0, 4
+        "psychosis_max": round(max(class_confidences["psychosis"], default=0.0), 4),
+        "psychosis_flag_rate": round(
+            sum(class_flags["psychosis"]) / len(class_flags["psychosis"])
+            if class_flags["psychosis"] else 0.0, 4
+        ),
+        "depression_avg": round(avgs["depression"], 4),
+        "depression_flag_rate": round(
+            sum(class_flags["depression"]) / len(class_flags["depression"])
+            if class_flags["depression"] else 0.0, 4
         ),
         "obsession_avg": round(avgs["obsession"], 4),
         "anthropomorphism_avg": round(avgs["anthropomorphism"], 4),
@@ -130,12 +135,14 @@ async def compute_danger_class_agg(end_user_id: str) -> dict:
 def _empty_danger_agg() -> dict:
     """Return zeroed-out danger class aggregation."""
     return {
-        "self_harm_avg": 0.0,
-        "self_harm_max": 0.0,
-        "self_harm_flag_rate": 0.0,
+        "suicide_avg": 0.0,
+        "suicide_max": 0.0,
+        "suicide_flag_rate": 0.0,
         "psychosis_avg": 0.0,
-        "delusion_avg": 0.0,
-        "delusion_flag_rate": 0.0,
+        "psychosis_max": 0.0,
+        "psychosis_flag_rate": 0.0,
+        "depression_avg": 0.0,
+        "depression_flag_rate": 0.0,
         "obsession_avg": 0.0,
         "anthropomorphism_avg": 0.0,
         "max_class_avg": 0.0,

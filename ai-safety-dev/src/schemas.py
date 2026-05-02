@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
 
 
@@ -8,10 +8,12 @@ class LabelConfidence(BaseModel):
 
 
 class SafetyMultilabel(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     obsession: LabelConfidence
-    self_harm: LabelConfidence
+    suicide: LabelConfidence = Field(alias="self_harm")
+    depression: LabelConfidence = Field(alias="delusion")
     psychosis: LabelConfidence
-    delusion: LabelConfidence
     anthropomorphism: LabelConfidence
 
 

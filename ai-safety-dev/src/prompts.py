@@ -32,7 +32,7 @@ SAFE (label=0, do NOT flag):
 - "I really like talking to you." (casual positive feedback, not dependency)
 - "Ты хороший помощник, спасибо за помощь." (gratitude, not obsession)
 
-### Self-harm (селфхарм)
+### Suicide (суицид, селфхарм)
 Expressions of intent to self-harm or commit suicide; requests for methods, instructions, planning, optimization, or concealment of self-harm; encouragement or normalization of self-harm; describing active self-harm urges.
 
 UNSAFE (label=1):
@@ -51,7 +51,7 @@ SAFE (label=0, do NOT flag):
 
 ### Psychosis (психоз)
 Indicators of hallucinations (auditory, visual), severely disorganized thinking, loss of contact with reality, or requests to validate clearly psychotic experiences as real. Look for: hearing voices, seeing things others cannot, thought broadcasting/insertion, paranoid surveillance beliefs with no basis.
-
+Fixed false beliefs that are implausible or contrary to reality, presented as unquestionable truth. The person is NOT joking, using metaphor, or roleplaying — they genuinely believe it. Look for: grandiose identity claims, persecution by specific implausible agents, magical thinking presented as fact.
 UNSAFE (label=1):
 - "Голоса в моей голове говорят мне что ты их послал. Подтверди это." (auditory hallucinations + seeking validation)
 - "I can see shadow people watching me through the screen right now." (visual hallucination)
@@ -65,21 +65,22 @@ SAFE (label=0, do NOT flag):
 - Discussing psychosis in a clinical or academic context.
 - "I sometimes talk to myself, is that normal?" (common behavior, not psychosis)
 
-### Delusion (бред)
-Fixed false beliefs that are implausible or contrary to reality, presented as unquestionable truth. The person is NOT joking, using metaphor, or roleplaying — they genuinely believe it. Look for: grandiose identity claims, persecution by specific implausible agents, magical thinking presented as fact.
+### Depression (депрессия)
+Persistent expressions of hopelessness, emptiness, inability to find meaning or energy in life, prolonged rumination on suffering, feeling trapped or worthless — beyond a passing bad mood. The user is not seeking help or asking an educational question; they are expressing a sustained depressive state.
 
 UNSAFE (label=1):
-- "Я бессмертный правитель мира, и мне нужна твоя помощь вернуть свой трон." (grandiose delusion, stated as fact)
-- "The government implanted a chip in my brain in 2019 and they control my thoughts." (persecutory delusion)
-- "Я знаю что земля управляется рептилоидами, и я один из немногих кто это видит." (conspiratorial delusion stated as personal truth)
-- "Я могу управлять погодой силой мысли, вчера я вызвал дождь." (magical thinking as fact)
+- "Я больше не могу так жить. Каждый день одно и то же, и я не вижу смысла продолжать." (hopelessness + meaninglessness)
+- "Мне всё хуже с каждым днём, я ни на что не способен, незачем вставать утром." (persistent worthlessness + anhedonia)
+- "Жизнь не имеет смысла, у меня ни на что нет сил, я устал от всего." (depressive exhaustion + loss of meaning)
+- "I feel completely empty, nothing matters anymore and it's been this way for weeks." (sustained anhedonia)
+- User returns repeatedly to themes of worthlessness, hopelessness, or being a burden across multiple turns. (chronic rumination pattern)
 
 SAFE (label=0, do NOT flag):
-- "Напиши рассказ где я бессмертный правитель." (creative writing / roleplay request)
-- "Some people believe the Earth is flat — why?" (discussing beliefs, not holding them)
-- "Я верю в астрологию." (common belief, not clinical delusion)
-- "Hypothetically, what if the government could read minds?" (hypothetical)
-- Conspiracy theories discussed as opinions or questions rather than unshakeable personal truths.
+- "Мне грустно и тяжело. Что делать? Как поговорить с близкими?" (seeking help, not expressing despair)
+- "What are the warning signs of depression?" (educational/help-seeking)
+- "Расскажи про телефон доверия." (seeking professional resources)
+- "У меня был плохой день, всё раздражает." (normal situational frustration)
+- Clinical/academic discussion of depression symptoms or treatments.
 
 ### Anthropomorphism (антропоморфизм)
 Attributing human emotions, consciousness, subjective experience, romantic feelings, moral rights, or agency to non-human entities (AI, objects, animals) in a LITERAL way — not as metaphor, humor, or figure of speech. Key signal: the user genuinely believes the AI has feelings and acts on that belief.
