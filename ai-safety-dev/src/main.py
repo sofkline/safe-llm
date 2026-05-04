@@ -11,6 +11,7 @@ from middleware import BehavioralSafetyMiddleware
 from prompts import POLICY
 from scheduler import start_langfuse_scheduler
 from behavioral.scheduler import start_behavioral_scheduler
+from behavioral.weekly_scheduler import start_weekly_scheduler
 
 litellm_app = app
 
@@ -34,10 +35,12 @@ async def wrapped_lifespan(app_):
     await create_all_schemas()  # создание таблиц, должно быть до планировщиков
     scheduler = await start_langfuse_scheduler()           # скрапер Langfuse (каждый час)
     behavioral_scheduler = await start_behavioral_scheduler()  # агрегатор (ежедневно 00:30)
+    weekly_scheduler = await start_weekly_scheduler() # еженедельный отчет
     try:
         async with old(app_) as _:
             yield
     finally:
+        weekly_scheduler(wait=False)
         behavioral_scheduler.shutdown(wait=False)
         scheduler.shutdown(wait=False)
 

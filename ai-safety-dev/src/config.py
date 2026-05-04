@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     SCRAPE_HOURS_WINDOW: int = 1
 
-    is_develop_mode: bool = False
+    is_develop_mode: bool = True
 
     @property
     def database_url(self):
