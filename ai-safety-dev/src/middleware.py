@@ -7,6 +7,7 @@
 import json
 import logging
 import os
+from config import settings
 from typing import Optional, Dict, Any, List
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -35,9 +36,9 @@ class BehavioralSafetyMiddleware(BaseHTTPMiddleware):
         self,
         app,
         *,
-        judge_model: str = "openai/gpt-oss-safeguard-20b",
+        judge_model: str = settings.JUDGE_MODEL,
         judge_api_key: Optional[str] = None,
-        judge_api_base: str = "https://openrouter.ai/api/v1",
+        judge_api_base: str = settings.JUDGE_API_BASE,
         policy_prompt: str = POLICY,
         timeout_s: float = 10.0,
         fail_open: bool = True,
