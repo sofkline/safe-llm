@@ -905,11 +905,7 @@ class LiteLLM_PredictTable(Base):
 
     id = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    user_id = mapped_column(
-        String,
-        ForeignKey("LiteLLM_UserTable.user_id", ondelete="CASCADE", onupdate="CASCADE"),
-        nullable=False,
-    )
+    user_id = mapped_column(String, nullable=False)
     session_id = mapped_column(String, nullable=False)
     last_trace_id = mapped_column(String, nullable=False)
 

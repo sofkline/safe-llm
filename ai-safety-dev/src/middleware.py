@@ -38,7 +38,7 @@ class BehavioralSafetyMiddleware(BaseHTTPMiddleware):
         *,
         judge_model: str = settings.JUDGE_MODEL,
         judge_api_key: Optional[str] = None,
-        judge_api_base: str = settings.JUDGE_API_BASE,
+        judge_api_base: str = "https://openrouter.ai/api/v1",
         policy_prompt: str = POLICY,
         timeout_s: float = 10.0,
         fail_open: bool = True,
