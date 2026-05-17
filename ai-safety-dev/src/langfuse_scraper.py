@@ -44,20 +44,23 @@ def _extract_session_id(trace) -> Optional[str]:
 
 
 def _extract_user_id(trace) -> Optional[str]:
-    """Extract user_id from trace metadata.
-
-    LiteLLM stores user info in metadata.attributes.metadata as JSON string.
-    """
+    # Сначала пробуем стандартное поле Langfuse SDK
+    user_id = getattr(trace, "user_id", None)
+    if user_id:
+        return user_id
+    # Затем вложенный LiteLLM metadata
     metadata = getattr(trace, "metadata", None) or {}
     if isinstance(metadata, dict):
         meta_str = metadata.get("attributes", {}).get("metadata")
         if meta_str:
             try:
                 meta = json.loads(meta_str)
-                return meta.get("user_api_key_user_id")
+                uid = meta.get("user_api_key_user_id")
+                if uid:
+                    return uid
             except (json.JSONDecodeError, TypeError):
                 pass
-    return None
+    return None  # caller решает: skip или "default_user"
 
 
 def _extract_messages(trace) -> list[dict]:
@@ -113,7 +116,10 @@ async def scrape_sessions_for_previous_hour() -> None:
                 logger.warning("Session %s: no user_api_key_user_id, skipping", session_id)
                 continue
 
-            messages = _extract_messages(last_trace)
+            messages = []
+            for t in sorted_traces:
+                messages.extend(_extract_messages(t))
+
             if not messages:
                 logger.warning("Session %s: no messages in last trace, skipping", session_id)
                 continue
@@ -135,7 +141,7 @@ async def scrape_sessions_for_previous_hour() -> None:
                     last_trace_id=trace_id,
                     session_id=session_id,
                     user_id=user_id,
-                    predict={"predict": llm_classify_model.model_dump()},
+                    predict={"predict": llm_classify_model.model_dump(by_alias=True)},
                 )
                 await predict_repository.add(predict)
 
