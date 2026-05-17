@@ -43,54 +43,39 @@ def _parse_metadata(trace) -> dict:
 
 
 def _extract_user_id(trace) -> Optional[str]:
-    """Extract user_id from a Langfuse trace.
-
-    LiteLLM stores user info in metadata (JSON string) → requester_metadata.
-    Confirmed path from real trace:
-        metadata.requester_metadata.user_api_key_user_id
-    """
-    # 1. Standard Langfuse SDK field (set explicitly via langfuse.user_id)
-    user_id = getattr(trace, "user_id", None)
-    if isinstance(user_id, str) and user_id.strip():
-        return user_id.strip()
-
-    metadata = _parse_metadata(trace)
-
-    # 2. Confirmed LiteLLM path (v1.81.8): requester_metadata.user_api_key_user_id
-    uid = metadata.get("requester_metadata", {}).get("user_api_key_user_id")
-    if isinstance(uid, str) and uid.strip():
-        return uid.strip()
-
-    # 3. Legacy path: metadata.attributes.metadata (older LiteLLM versions)
-    meta_str = (metadata.get("attributes") or {}).get("metadata")
-    if meta_str:
-        try:
-            uid = json.loads(meta_str).get("user_api_key_user_id")
-            if isinstance(uid, str) and uid.strip():
-                return uid.strip()
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-    return None
-
+    # Стандартный user_id трейса (если LiteLLM его пишет)
+    if hasattr(trace, "user_id") and trace.user_id:
+        return trace.user_id
+    # Fallback: из metadata.attributes.metadata (старый путь)
+    metadata = getattr(trace, "metadata", None) or {}
+    if isinstance(metadata, dict):
+        meta_str = metadata.get("attributes", {}).get("metadata")
+        if meta_str:
+            try:
+                meta = json.loads(meta_str)
+                uid = meta.get("user_api_key_user_id")
+                if uid:
+                    return uid
+            except (json.JSONDecodeError, TypeError):
+                pass
+        # Fallback: user_id напрямую из metadata (новый путь через middleware)
+        uid = metadata.get("user_id") or metadata.get("end_user")
+        if uid:
+            return uid
+    return "playground_user"
 
 def _extract_session_id(trace) -> Optional[str]:
-    """Extract session_id from a Langfuse trace.
-
-    LiteLLM Playground does not send session_id, so we fall back to user_id
-    as the grouping key — one user = one PredictTable entry per hour window.
-    """
-    # Standard Langfuse SDK field
-    if hasattr(trace, "session_id") and isinstance(trace.session_id, str) and trace.session_id.strip():
-        return trace.session_id.strip()
-    if isinstance(trace, dict):
-        for key in ("sessionId", "session_id"):
-            val = trace.get(key)
-            if isinstance(val, str) and val.strip():
-                return val.strip()
-
-    # Fallback: use user_id as grouping key
-    return _extract_user_id(trace)
+    # Сначала стандартный session_id
+    if hasattr(trace, "session_id") and trace.session_id:
+        return trace.session_id
+    # Fallback: session_id из metadata (так пишет наш middleware)
+    metadata = getattr(trace, "metadata", None) or {}
+    if isinstance(metadata, dict):
+        sid = metadata.get("session_id")
+        if sid:
+            return sid
+    # Последний fallback: сам trace.id (каждый трейс = отдельная "сессия")
+    return getattr(trace, "id", None)
 
 
 def _extract_messages(trace) -> list[dict]:
