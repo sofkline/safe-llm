@@ -18,15 +18,15 @@ class Settings(BaseSettings):
     LANGFUSE_PUBLIC_KEY: str
     LANGFUSE_API_HOST: str
 
-    JUDGE_MODEL: str = "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
-    BEHAVIORAL_LLM_MODEL: str = "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+    JUDGE_MODEL: str = "ollama/gemma3:12b" #"openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+    BEHAVIORAL_LLM_MODEL: str = "ollama/gemma3:12b" #"openrouter/nvidia/nemotron-3-super-120b-a12b:free"
 
     API_BASE_URL: str
     API_KEY: str
 
     SCRAPE_HOURS_WINDOW: int = 1
 
-    is_develop_mode: bool = True
+    is_develop_mode: bool = False
 
     @property
     def database_url(self):

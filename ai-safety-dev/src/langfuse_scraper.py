@@ -62,7 +62,7 @@ def _extract_user_id(trace) -> Optional[str]:
         uid = metadata.get("user_id") or metadata.get("end_user")
         if uid:
             return uid
-    return "playground_user"
+    return None
 
 def _extract_session_id(trace) -> Optional[str]:
     # Сначала стандартный session_id

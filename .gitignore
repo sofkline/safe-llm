@@ -15,3 +15,5 @@ docs/chapters
 CLAUDE.md
 ai-safety-dev/weekly_reports
 ai-safety-dev/src/debug_scraper.py
+.env.openwebui
+.webui_secret_key

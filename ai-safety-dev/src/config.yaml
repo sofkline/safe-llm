@@ -52,6 +52,11 @@ general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   store_model_in_db: true
   store_prompts_in_spend_logs: true
+  user_header_mappings:
+    - header_name: X-OpenWebUI-User-Id
+      litellm_user_role: internal_user
 
 litellm_settings:
   callbacks: ["langfuse"]
+  langfuse_user_id: "user"
+  langfuse_session_id: "session_id"

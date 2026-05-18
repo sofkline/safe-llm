@@ -137,6 +137,7 @@ That's it. `uv` creates a virtual environment and installs all packages from the
 
 ```bash
 uv run python src/main.py
+uv run --env-file .env.openwebui open-webui serve --port 8080
 ```
 
 You should see output like:
