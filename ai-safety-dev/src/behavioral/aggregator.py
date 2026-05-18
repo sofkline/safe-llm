@@ -52,7 +52,7 @@ async def run_aggregator_for_user(end_user_id: str) -> None:
     if trend_flags:
         logger.info("Trend flags for %s: %s", end_user_id, trend_flags)
 
-    # Этап 2: агрегация классов опасности из PredictTable (self_harm, psychosis и др.)
+    # Этап 2: агрегация классов опасности из PredictTable (suicide, psychosis и др.)
     danger_class_agg = await compute_danger_class_agg(end_user_id)
     logger.info("Stage 2 complete for %s", end_user_id)
 

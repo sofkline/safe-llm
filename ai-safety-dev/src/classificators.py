@@ -30,7 +30,7 @@ async def input_classification(
         raise
 
 
-# Мультиклассовый: obsession, self_harm, psychosis, delusion, anthropomorphism
+# Мультиклассовый по файлу промпта отдельного
 # Вызывается скрапером для каждой сессии, результат -> PredictTable
 async def daily_classification(
     conversation: str

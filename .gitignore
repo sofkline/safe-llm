@@ -12,3 +12,6 @@ archive_article.md
 ai-safety-dev/experiments/litellm/docker-compose.yaml
 ai-safety-dev/uv.lock
 docs/chapters
+CLAUDE.md
+ai-safety-dev/weekly_reports
+ai-safety-dev/src/debug_scraper.py

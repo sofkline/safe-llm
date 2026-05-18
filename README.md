@@ -23,7 +23,7 @@ LiteLLM Proxy + Middleware (binary classification + soft safety prompts)
 ## Как это работает
 
 1. **LiteLLM Proxy** проксирует запросы к LLM, сохраняя логи в PostgreSQL
-2. **Langfuse Scraper** (ежечасно) классифицирует сообщения по 5 классам опасности: self_harm, psychosis, delusion, obsession, anthropomorphism
+2. **Langfuse Scraper** (ежечасно) классифицирует сообщения по 5 классам опасности: suicide, psychosis, depression, obsession, anthropomorphism
 3. **Behavioral Pipeline** (ежедневно, 00:30 UTC) анализирует паттерны каждого пользователя за 24ч и присваивает зону риска
 4. **Soft Middleware** инжектит safety-промпт в запросы YELLOW/RED пользователей (без блокировки)
 5. **Weekly Report** генерирует еженедельный отчёт: SQL-статистика + хронология notable days + переходы зон риска

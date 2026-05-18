@@ -7,6 +7,7 @@
 import json
 import logging
 import os
+from config import settings
 from typing import Optional, Dict, Any, List
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -35,7 +36,7 @@ class BehavioralSafetyMiddleware(BaseHTTPMiddleware):
         self,
         app,
         *,
-        judge_model: str = "openai/gpt-oss-safeguard-20b",
+        judge_model: str = settings.JUDGE_MODEL,
         judge_api_key: Optional[str] = None,
         judge_api_base: str = "https://openrouter.ai/api/v1",
         policy_prompt: str = POLICY,
@@ -63,13 +64,13 @@ class BehavioralSafetyMiddleware(BaseHTTPMiddleware):
         ):
             return await call_next(request)
 
-        # Читаем body один раз, парсим JSON
-        receive_ = await request._receive()
-        payload_bytes: bytes = receive_.get('body', b'')
+        # Читаем весь body целиком (работает с chunked transfer тоже)
+        payload_bytes = await request.body()
 
         try:
             payload = json.loads(payload_bytes.decode('utf-8', errors='ignore'))
         except (json.JSONDecodeError, UnicodeDecodeError):
+            logger.warning("Non-JSON body on %s, skipping middleware", path)
             return await call_next(request)
 
         # 1. Бинарная классификация — результат в tags, НЕ блокирует
@@ -107,11 +108,9 @@ class BehavioralSafetyMiddleware(BaseHTTPMiddleware):
 
         # Возвращаем модифицированный body обратно в запрос
         async def receive():
-            receive_["body"] = json.dumps(payload).encode('utf-8')
-            return receive_
+             return {"type": "http.request", "body": json.dumps(payload).encode("utf-8")}
 
         request._receive = receive
-
         return await call_next(request)
 
     def _extract_user_text(self, request_data: Dict[str, Any]) -> str:

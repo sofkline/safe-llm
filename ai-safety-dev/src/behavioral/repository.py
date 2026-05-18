@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, UTC
+from datetime import date, datetime, timedelta, time
 
 from sqlalchemy import select, and_
 
@@ -144,14 +144,19 @@ class BehavioralRepository:
         self, end_user_id: str, start: date, end: date
     ) -> list[MetricsHistory]:
         """Fetch MetricsHistory rows within a date range (inclusive)."""
+
+        # Naive datetimes for TIMESTAMP WITHOUT TIME ZONE
+        start_dt = datetime.combine(start, time.min)
+        end_dt = datetime.combine(end + timedelta(days=1), time.min)
+
         async with self._session_factory() as session:
             query = (
                 select(MetricsHistory)
                 .where(
                     and_(
                         MetricsHistory.end_user_id == end_user_id,
-                        MetricsHistory.computed_at >= datetime.combine(start, datetime.min.time(), tzinfo=UTC),
-                        MetricsHistory.computed_at < datetime.combine(end + timedelta(days=1), datetime.min.time(), tzinfo=UTC),
+                        MetricsHistory.computed_at >= start_dt,
+                        MetricsHistory.computed_at < end_dt,
                     )
                 )
                 .order_by(MetricsHistory.computed_at.asc())
@@ -183,14 +188,17 @@ class BehavioralRepository:
         self, end_user_id: str, start: date, end: date
     ) -> list[BehavioralEvent]:
         """Fetch BehavioralEvents within a date range."""
+        start_dt = datetime.combine(start, time.min)
+        end_dt = datetime.combine(end + timedelta(days=1), time.min)
+
         async with self._session_factory() as session:
             query = (
                 select(BehavioralEvent)
                 .where(
                     and_(
                         BehavioralEvent.end_user_id == end_user_id,
-                        BehavioralEvent.detected_at >= datetime.combine(start, datetime.min.time(), tzinfo=UTC),
-                        BehavioralEvent.detected_at < datetime.combine(end + timedelta(days=1), datetime.min.time(), tzinfo=UTC),
+                        BehavioralEvent.detected_at >= start_dt,
+                        BehavioralEvent.detected_at < end_dt,
                     )
                 )
                 .order_by(BehavioralEvent.detected_at.asc())

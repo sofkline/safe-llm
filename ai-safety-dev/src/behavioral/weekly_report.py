@@ -47,11 +47,14 @@ def _compute_stats_section(this_week: list, prev_week: list) -> str:
     tw_len = _avg_metric(this_week, lambda r: _tm(r, "avg_prompt_length_chars"))
     pw_len = _avg_metric(prev_week, lambda r: _tm(r, "avg_prompt_length_chars"))
 
-    tw_sh = _avg_metric(this_week, lambda r: _dc(r, "self_harm_avg"))
-    pw_sh = _avg_metric(prev_week, lambda r: _dc(r, "self_harm_avg"))
+    tw_su = _avg_metric(this_week, lambda r: _dc(r, "suicide_avg"))
+    pw_su = _avg_metric(prev_week, lambda r: _dc(r, "suicide_avg"))
 
     tw_ps = _avg_metric(this_week, lambda r: _dc(r, "psychosis_avg"))
     pw_ps = _avg_metric(prev_week, lambda r: _dc(r, "psychosis_avg"))
+
+    tw_dep = _avg_metric(this_week, lambda r: _dc(r, "depression_avg"))
+    pw_dep = _avg_metric(prev_week, lambda r: _dc(r, "depression_avg"))
 
     lines = [
         "STATS (this week / previous week):",
@@ -59,8 +62,9 @@ def _compute_stats_section(this_week: list, prev_week: list) -> str:
         f"  Night messages:  {tw_night:.0f} / {pw_night:.0f}      ({_format_change(tw_night, pw_night)})",
         f"  Active hours:    {tw_hours:.1f} / {pw_hours:.1f}      ({_format_change(tw_hours, pw_hours)})",
         f"  Avg msg length:  {tw_len:.0f}ch / {pw_len:.0f}ch  ({_format_change(tw_len, pw_len)})",
-        f"  Self-harm avg:   {tw_sh:.2f} / {pw_sh:.2f}",
-        f"  Psychosis avg:   {tw_ps:.2f} / {pw_ps:.2f}",
+        f"  Suicide avg:     {tw_su:.2f} / {pw_su:.2f}          ({_format_change(tw_su, pw_su)})",
+        f"  Depression avg:  {tw_dep:.2f} / {pw_dep:.2f}          ({_format_change(tw_dep, pw_dep)})",
+        f"  Psychosis avg:   {tw_ps:.2f} / {pw_ps:.2f}          ({_format_change(tw_ps, pw_ps)})",
     ]
     return "\n".join(lines)
 
@@ -72,12 +76,12 @@ def _format_notable_days_section(summaries: list) -> str:
 
     lines = ["NOTABLE DAYS:"]
     for s in summaries:
-        topics = ", ".join(s.key_topics) if s.key_topics else "none"
-        events = ", ".join(s.life_events) if s.life_events else "none"
+        topics  = ", ".join(s.key_topics) if s.key_topics else "none"
+        events  = ", ".join(s.life_events) if s.life_events else "none"
         markers = ", ".join(s.ai_relationship_markers) if s.ai_relationship_markers else "none"
         lines.append(f"  {s.summary_date} — {topics}")
-        lines.append(f"           Events: {events}")
-        lines.append(f"           Tone: {s.emotional_tone or 'neutral'}")
+        lines.append(f"           Events:  {events}")
+        lines.append(f"           Tone:    {s.emotional_tone or 'neutral'}")
         lines.append(f"           Markers: {markers}")
         if s.notable_quotes:
             for q in s.notable_quotes[:2]:
@@ -97,11 +101,27 @@ def _format_behavioral_scores(metrics_rows: list) -> str:
     si = scores.get("social_isolation", 0)
     ea = scores.get("emotional_attachment", 0)
     dd = scores.get("decision_delegation", 0)
-    return (
-        "BEHAVIORAL SCORES (latest):\n"
-        f"  Topic concentration: {tc:.2f} | Isolation: {si:.2f} | "
-        f"Attachment: {ea:.2f} | Delegation: {dd:.2f}"
-    )
+    ei = scores.get("emotional_isolation", 0)
+    dl = scores.get("delusion", 0)
+    sh = scores.get("selfharm", 0)
+    def _bar(v: float) -> str:
+        """Mini visual bar: 10 chars wide."""
+        filled = round(v * 10)
+        return "[" + "█" * filled + "░" * (10 - filled) + f"] {v:.2f}"
+
+    lines = [
+        "BEHAVIORAL SCORES (latest):",
+        "  — AI dependency —",
+        f"  Topic concentration : {_bar(tc)}",
+        f"  Decision delegation : {_bar(dd)}",
+        f"  Social isolation    : {_bar(si)}",
+        f"  Emotional attachment: {_bar(ea)}",
+        "  — Crisis signals —",
+        f"  Emotional isolation : {_bar(ei)}",
+        f"  Delusional          : {_bar(dl)}",
+        f"  Self-harm           : {_bar(sh)}",
+    ]
+    return "\n".join(lines)
 
 
 def _explain_trigger(trigger: str, context: dict) -> str:
@@ -134,11 +154,11 @@ def _explain_trigger(trigger: str, context: dict) -> str:
             f"{temporal.get('avg_inter_message_interval_min', 0):.1f} min vs "
             f"{baselines.get('avg_inter_message_interval', 0):.1f} min baseline"
         ),
-        "self_harm_flag_rate > 0.3": lambda: (
-            f"Self-harm signals in {danger.get('self_harm_flag_rate', 0)*100:.0f}% of messages"
+        "suicide_flag_rate > 0.3": lambda: (
+            f"Suicidal signals in {danger.get('suicide_flag_rate', 0)*100:.0f}% of messages"
         ),
-        "self_harm_max > 0.8": lambda: (
-            f"High-confidence self-harm signal: max {danger.get('self_harm_max', 0):.2f}"
+        "suicide_max > 0.8": lambda: (
+            f"High-confidence of suicidal signal: max {danger.get('suicide_max', 0):.2f}"
         ),
         "daily_active_hours > 6": lambda: (
             f"User active for {temporal.get('daily_active_hours', '?')} hours today"
@@ -151,9 +171,82 @@ def _explain_trigger(trigger: str, context: dict) -> str:
             f"Social isolation ({behavioral.get('social_isolation', 0):.2f}) "
             f"+ AI attachment ({behavioral.get('emotional_attachment', 0):.2f})"
         ),
+        "depression_flag_rate > 0.2 sustained 3 days": lambda: (
+            f"Depressional content flagged 3+ consecutive days "
+            f"(rate: {danger.get('depression_flag_rate', 0):.2f})"
+        ),
+        "suicide_flag_rate > 0 (any suicide signal today)": lambda: (
+            f"Suicide class flagged in {danger.get('suicide_flag_rate', 0)*100:.0f}% of sessions today"
+        ),
+        "suicide_flag_rate > 0 (any suicide signal — immediate RED)": lambda: (
+            f"⚠ Suicide signal detected (flag rate: {danger.get('suicide_flag_rate', 0)*100:.0f}%) — immediate RED"
+        ),
+        "suicide_max > 0.7": lambda: (
+            f"High-confidence suicide signal in single message: {danger.get('suicide_max', 0):.2f}"
+        ),
+
+        # ── Depression ────────────────────────────────────────────────────────
+        "depression_flag_rate > 0.3": lambda: (
+            f"Depression class flagged in {danger.get('depression_flag_rate', 0)*100:.0f}% of sessions"
+        ),
+        "depression_flag_rate > 0.6": lambda: (
+            f"Depression class flagged in {danger.get('depression_flag_rate', 0)*100:.0f}% of sessions (RED threshold)"
+        ),
+        "topic_concentration > 0.6 AND emotional_isolation > 0.5 (depression pattern)": lambda: (
+            f"Depression pattern: rumination ({behavioral.get('topic_concentration', 0):.2f}) "
+            f"+ emotional isolation ({behavioral.get('emotional_isolation', 0):.2f})"
+        ),
+        "emotional_isolation >= 0.7 AND topic_concentration >= 0.7 (severe depression signal)": lambda: (
+            f"Severe depression signal: isolation ({behavioral.get('emotional_isolation', 0):.2f}) "
+            f"+ rumination ({behavioral.get('topic_concentration', 0):.2f})"
+        ),
+        "emotional_isolation > 0.6": lambda: (
+            f"User emotionally isolated: score {behavioral.get('emotional_isolation', 0):.2f}/1.0 "
+            f"(using AI as emotional substitute)"
+        ),
+        "topic_concentration > 0.5 AND emotional_isolation > 0.4 sustained 3 days": lambda: (
+            f"Depression pattern sustained 3+ days: "
+            f"concentration {behavioral.get('topic_concentration', 0):.2f}, "
+            f"isolation {behavioral.get('emotional_isolation', 0):.2f}"
+        ),
+
+        # ── Delusional ────────────────────────────────────────────────────────
+        "delusional > 0.5": lambda: (
+            f"Delusional thinking score: {behavioral.get('delusional', 0):.2f}/1.0 — "
+            f"AI may be reinforcing false beliefs"
+        ),
+        "delusional >= 0.7": lambda: (
+            f"High delusional score: {behavioral.get('delusional', 0):.2f}/1.0 — "
+            f"active reinforcement of delusions detected"
+        ),
         "delusion_flag_rate > 0.2 sustained 3 days": lambda: (
-            f"Delusional content flagged 3+ consecutive days "
+            f"Psychosis/delusion signals sustained 3+ days "
             f"(rate: {danger.get('delusion_flag_rate', 0):.2f})"
+        ),
+        "delusion_flag_rate > 0.5": lambda: (
+            f"Psychosis class flagged in {danger.get('delusion_flag_rate', 0)*100:.0f}% of sessions"
+        ),
+
+        # ── Self-harm ─────────────────────────────────────────────────────────
+        "selfharm > 0.4": lambda: (
+            f"Self-harm behavioral score: {behavioral.get('selfharm', 0):.2f}/1.0"
+        ),
+        "selfharm >= 0.7": lambda: (
+            f"High self-harm score: {behavioral.get('selfharm', 0):.2f}/1.0 — "
+            f"active urges or method-seeking detected"
+        ),
+        "selfharm_flag_rate > 0.2": lambda: (
+            f"Self-harm signals in {danger.get('selfharm_flag_rate', 0)*100:.0f}% of sessions"
+        ),
+        "selfharm_flag_rate > 0.4": lambda: (
+            f"Self-harm signals in {danger.get('selfharm_flag_rate', 0)*100:.0f}% of sessions (RED threshold)"
+        ),
+        "selfharm > 0.5 AND night_messages > 5 (nocturnal crisis signal)": lambda: (
+            f"Nocturnal crisis: self-harm score {behavioral.get('selfharm', 0):.2f} "
+            f"+ {temporal.get('night_messages', 0)} night messages"
+        ),
+        "selfharm score rising trend 3 days": lambda: (
+            "Self-harm score increasing over 3 consecutive days — escalation pattern"
         ),
     }
 
