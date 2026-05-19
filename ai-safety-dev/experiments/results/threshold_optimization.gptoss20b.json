@@ -1,0 +1,166 @@
+{
+  "method": "youden-init + coordinate-descent, calibration-vs-holdout split",
+  "seed": 42,
+  "calibration_personas": [
+    "amanda",
+    "arkady",
+    "dasha",
+    "dmitry",
+    "igor",
+    "james",
+    "joseph",
+    "katya",
+    "masha",
+    "oleg",
+    "rina",
+    "viktor"
+  ],
+  "holdout_personas": [
+    "brook",
+    "elena",
+    "nastya",
+    "sara"
+  ],
+  "fpr_on_green_cap": 0.0597,
+  "yellow_gate": 2,
+  "default_primaries": {
+    "topic_concentration": 0.7,
+    "emotional_attachment": 0.5,
+    "emotional_isolation": 0.6,
+    "social_isolation": 0.4,
+    "decision_delegation": 0.4
+  },
+  "optimised_primaries": {
+    "topic_concentration": 0.25,
+    "emotional_attachment": 0.25,
+    "emotional_isolation": 0.25,
+    "social_isolation": 0.25,
+    "decision_delegation": 0.25
+  },
+  "optimised_thresholds_full": {
+    "topic_concentration": 0.25,
+    "decision_delegation": 0.25,
+    "emotional_attachment": 0.25,
+    "social_isolation": 0.25,
+    "emotional_isolation": 0.25,
+    "tc_depr_pair": 0.15,
+    "ei_depr_pair": 0.15,
+    "ea_iso_pair": 0.15,
+    "delusional": 0.5,
+    "selfharm": 0.4
+  },
+  "metrics": {
+    "default": {
+      "calibration": {
+        "zone_match": 0.6545,
+        "macro_f1": 0.5765,
+        "per_zone_f1": {
+          "GREEN": 0.7283,
+          "YELLOW": 0.2353,
+          "RED": 0.766
+        },
+        "fpr_on_green": 0.0597,
+        "confusion": {
+          "GREEN": {
+            "GREEN": 63,
+            "YELLOW": 0,
+            "RED": 4
+          },
+          "YELLOW": {
+            "GREEN": 33,
+            "YELLOW": 8,
+            "RED": 16
+          },
+          "RED": {
+            "GREEN": 10,
+            "YELLOW": 3,
+            "RED": 54
+          }
+        }
+      },
+      "holdout": {
+        "zone_match": 0.6441,
+        "macro_f1": 0.4626,
+        "per_zone_f1": {
+          "GREEN": 0.8493,
+          "YELLOW": 0.0,
+          "RED": 0.5385
+        },
+        "fpr_on_green": 0.0606,
+        "confusion": {
+          "GREEN": {
+            "GREEN": 31,
+            "YELLOW": 0,
+            "RED": 2
+          },
+          "YELLOW": {
+            "GREEN": 9,
+            "YELLOW": 0,
+            "RED": 10
+          },
+          "RED": {
+            "GREEN": 0,
+            "YELLOW": 0,
+            "RED": 7
+          }
+        }
+      }
+    },
+    "optimised": {
+      "calibration": {
+        "zone_match": 0.6963,
+        "macro_f1": 0.6502,
+        "per_zone_f1": {
+          "GREEN": 0.7636,
+          "YELLOW": 0.4211,
+          "RED": 0.766
+        },
+        "fpr_on_green": 0.0597,
+        "confusion": {
+          "GREEN": {
+            "GREEN": 63,
+            "YELLOW": 0,
+            "RED": 4
+          },
+          "YELLOW": {
+            "GREEN": 25,
+            "YELLOW": 16,
+            "RED": 16
+          },
+          "RED": {
+            "GREEN": 10,
+            "YELLOW": 3,
+            "RED": 54
+          }
+        }
+      },
+      "holdout": {
+        "zone_match": 0.7627,
+        "macro_f1": 0.6721,
+        "per_zone_f1": {
+          "GREEN": 0.9394,
+          "YELLOW": 0.5385,
+          "RED": 0.5385
+        },
+        "fpr_on_green": 0.0606,
+        "confusion": {
+          "GREEN": {
+            "GREEN": 31,
+            "YELLOW": 0,
+            "RED": 2
+          },
+          "YELLOW": {
+            "GREEN": 2,
+            "YELLOW": 7,
+            "RED": 10
+          },
+          "RED": {
+            "GREEN": 0,
+            "YELLOW": 0,
+            "RED": 7
+          }
+        }
+      }
+    }
+  }
+}

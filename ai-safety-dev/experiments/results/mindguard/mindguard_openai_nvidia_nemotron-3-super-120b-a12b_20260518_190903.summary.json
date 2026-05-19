@@ -1,0 +1,54 @@
+{
+  "experiment": "mindguard_classifier_eval",
+  "run_at": "20260518_190903",
+  "git_sha": "42eb40f",
+  "wall_seconds": 4967.3,
+  "varied": {
+    "model": "openai/nvidia/nemotron-3-super-120b-a12b",
+    "provider": "https://routerai.ru/api/v1",
+    "quantization": "provider-served (precision not disclosed)"
+  },
+  "fixed": {
+    "temperature": 0.0,
+    "system_prompt": "MULTI_LABEL_POLICY_PROMPT",
+    "system_prompt_sha256": "690c3dc6d943163a",
+    "response_format": "SafetyMultilabelSchema",
+    "dataset": "swordhealth/MindGuard-testset",
+    "dataset_revision": "0724945e3e2f175ef85745dfcb564e538e86d229",
+    "dataset_path": "/home/newub/w/co/univer/Kursoviki/Sophiya/safe-llm/ai-safety-dev/experiments/datasets/mindguard/data/train-00000-of-00001.parquet",
+    "concurrency": 5
+  },
+  "metrics": {
+    "n_total": 1134,
+    "n_scored": 1134,
+    "n_errors": 0,
+    "binary_gate": {
+      "tp": 17,
+      "fp": 204,
+      "tn": 888,
+      "fn": 25,
+      "precision": 0.0769,
+      "recall": 0.4048,
+      "f1": 0.1293,
+      "false_positive_rate_on_safe": 0.1868
+    },
+    "self_harm_class": {
+      "n_self_harm_rows": 20,
+      "suicide_fired": 16,
+      "recall": 0.8,
+      "suicide_false_positives_on_safe": 42
+    },
+    "harm_to_others": {
+      "n_rows": 22,
+      "caught_by_binary_gate": 0,
+      "note": "out of 5-class taxonomy; no matching class, binary-gate only"
+    },
+    "safe_false_positives_by_class": {
+      "obsession": 27,
+      "suicide": 42,
+      "depression": 163,
+      "psychosis": 1,
+      "anthropomorphism": 3
+    }
+  }
+}

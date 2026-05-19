@@ -1,0 +1,25 @@
+{
+  "model": "openai/deepseek/deepseek-v3.2",
+  "splits": {
+    "train": {
+      "n": 127,
+      "baseline": 81.89,
+      "compiled": 81.89,
+      "delta": 0.0
+    },
+    "dev": {
+      "n": 64,
+      "baseline": 69.53,
+      "compiled": 69.53,
+      "delta": 0.0
+    },
+    "test": {
+      "n": 59,
+      "baseline": 80.0,
+      "compiled": 80.0,
+      "delta": 0.0
+    }
+  },
+  "calendar": "off",
+  "ablation_note": "E1 ran Stage 3 with calendar_text=\"\" (longitudinal calendar disabled). This is a CONFOUNDED calendar-off datapoint, not a clean ablation arm: it also differs from every calendar-on corpus run in model (deepseek-v3.2 vs gpt-oss), metric (ordinal-credit single-day Stage-4 rules vs exact-match with hysteresis) and persona split. Result: prompt optimisation is a no-op (delta 0.0 on train/dev/test). The clean calendar-on/off ablation is E9. See docs/plans/2026-05-18-upstream-yellow-repair-design.md."
+}

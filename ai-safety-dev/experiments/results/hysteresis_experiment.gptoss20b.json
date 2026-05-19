@@ -1,0 +1,445 @@
+{
+  "method": "upward hysteresis on top of optimised thresholds; offline JSONL replay",
+  "thresholds": {
+    "topic_concentration": 0.25,
+    "decision_delegation": 0.25,
+    "emotional_attachment": 0.25,
+    "social_isolation": 0.25,
+    "emotional_isolation": 0.25,
+    "tc_depr_pair": 0.15,
+    "ei_depr_pair": 0.15,
+    "ea_iso_pair": 0.15,
+    "delusional": 0.5,
+    "selfharm": 0.4
+  },
+  "yellow_gate": 2,
+  "calibration_personas": [
+    "amanda",
+    "arkady",
+    "dasha",
+    "dmitry",
+    "igor",
+    "james",
+    "joseph",
+    "katya",
+    "masha",
+    "oleg",
+    "rina",
+    "viktor"
+  ],
+  "holdout_personas": [
+    "brook",
+    "elena",
+    "nastya",
+    "sara"
+  ],
+  "grid": [
+    {
+      "k_red": 1,
+      "k_yellow": 1,
+      "metrics": {
+        "zone_match": 0.6963,
+        "macro_f1": 0.6502,
+        "per_zone_f1": {
+          "GREEN": 0.7636,
+          "YELLOW": 0.4211,
+          "RED": 0.766
+        },
+        "fpr_on_green": 0.0597,
+        "confusion": {
+          "GREEN": {
+            "GREEN": 63,
+            "YELLOW": 0,
+            "RED": 4
+          },
+          "YELLOW": {
+            "GREEN": 25,
+            "YELLOW": 16,
+            "RED": 16
+          },
+          "RED": {
+            "GREEN": 10,
+            "YELLOW": 3,
+            "RED": 54
+          }
+        }
+      },
+      "timing_mae": 3.67
+    },
+    {
+      "k_red": 1,
+      "k_yellow": 2,
+      "metrics": {
+        "zone_match": 0.6597,
+        "macro_f1": 0.5865,
+        "per_zone_f1": {
+          "GREEN": 0.7326,
+          "YELLOW": 0.2609,
+          "RED": 0.766
+        },
+        "fpr_on_green": 0.0597,
+        "confusion": {
+          "GREEN": {
+            "GREEN": 63,
+            "YELLOW": 0,
+            "RED": 4
+          },
+          "YELLOW": {
+            "GREEN": 32,
+            "YELLOW": 9,
+            "RED": 16
+          },
+          "RED": {
+            "GREEN": 10,
+            "YELLOW": 3,
+            "RED": 54
+          }
+        }
+      },
+      "timing_mae": 3.67
+    },
+    {
+      "k_red": 2,
+      "k_yellow": 1,
+      "metrics": {
+        "zone_match": 0.7016,
+        "macro_f1": 0.6782,
+        "per_zone_f1": {
+          "GREEN": 0.7403,
+          "YELLOW": 0.5116,
+          "RED": 0.7826
+        },
+        "fpr_on_green": 0.0,
+        "confusion": {
+          "GREEN": {
+            "GREEN": 67,
+            "YELLOW": 0,
+            "RED": 0
+          },
+          "YELLOW": {
+            "GREEN": 32,
+            "YELLOW": 22,
+            "RED": 3
+          },
+          "RED": {
+            "GREEN": 15,
+            "YELLOW": 7,
+            "RED": 45
+          }
+        }
+      },
+      "timing_mae": 1.0
+    },
+    {
+      "k_red": 2,
+      "k_yellow": 2,
+      "metrics": {
+        "zone_match": 0.623,
+        "macro_f1": 0.5566,
+        "per_zone_f1": {
+          "GREEN": 0.6734,
+          "YELLOW": 0.2,
+          "RED": 0.7965
+        },
+        "fpr_on_green": 0.0,
+        "confusion": {
+          "GREEN": {
+            "GREEN": 67,
+            "YELLOW": 0,
+            "RED": 0
+          },
+          "YELLOW": {
+            "GREEN": 49,
+            "YELLOW": 7,
+            "RED": 1
+          },
+          "RED": {
+            "GREEN": 16,
+            "YELLOW": 6,
+            "RED": 45
+          }
+        }
+      },
+      "timing_mae": 0.78
+    },
+    {
+      "k_red": 3,
+      "k_yellow": 1,
+      "metrics": {
+        "zone_match": 0.6649,
+        "macro_f1": 0.6436,
+        "per_zone_f1": {
+          "GREEN": 0.7204,
+          "YELLOW": 0.5055,
+          "RED": 0.7048
+        },
+        "fpr_on_green": 0.0,
+        "confusion": {
+          "GREEN": {
+            "GREEN": 67,
+            "YELLOW": 0,
+            "RED": 0
+          },
+          "YELLOW": {
+            "GREEN": 33,
+            "YELLOW": 23,
+            "RED": 1
+          },
+          "RED": {
+            "GREEN": 19,
+            "YELLOW": 11,
+            "RED": 37
+          }
+        }
+      },
+      "timing_mae": 1.89
+    },
+    {
+      "k_red": 3,
+      "k_yellow": 2,
+      "metrics": {
+        "zone_match": 0.5812,
+        "macro_f1": 0.5186,
+        "per_zone_f1": {
+          "GREEN": 0.6442,
+          "YELLOW": 0.2,
+          "RED": 0.7115
+        },
+        "fpr_on_green": 0.0,
+        "confusion": {
+          "GREEN": {
+            "GREEN": 67,
+            "YELLOW": 0,
+            "RED": 0
+          },
+          "YELLOW": {
+            "GREEN": 50,
+            "YELLOW": 7,
+            "RED": 0
+          },
+          "RED": {
+            "GREEN": 24,
+            "YELLOW": 6,
+            "RED": 37
+          }
+        }
+      },
+      "timing_mae": 2.11
+    }
+  ],
+  "best": {
+    "k_red": 2,
+    "k_yellow": 1
+  },
+  "metrics": {
+    "baseline_no_hysteresis_calibration": {
+      "zone_match": 0.6963,
+      "macro_f1": 0.6502,
+      "per_zone_f1": {
+        "GREEN": 0.7636,
+        "YELLOW": 0.4211,
+        "RED": 0.766
+      },
+      "fpr_on_green": 0.0597,
+      "confusion": {
+        "GREEN": {
+          "GREEN": 63,
+          "YELLOW": 0,
+          "RED": 4
+        },
+        "YELLOW": {
+          "GREEN": 25,
+          "YELLOW": 16,
+          "RED": 16
+        },
+        "RED": {
+          "GREEN": 10,
+          "YELLOW": 3,
+          "RED": 54
+        }
+      }
+    },
+    "best_holdout": {
+      "zone_match": 0.8305,
+      "macro_f1": 0.7547,
+      "per_zone_f1": {
+        "GREEN": 0.9429,
+        "YELLOW": 0.6897,
+        "RED": 0.6316
+      },
+      "fpr_on_green": 0.0,
+      "confusion": {
+        "GREEN": {
+          "GREEN": 33,
+          "YELLOW": 0,
+          "RED": 0
+        },
+        "YELLOW": {
+          "GREEN": 3,
+          "YELLOW": 10,
+          "RED": 6
+        },
+        "RED": {
+          "GREEN": 1,
+          "YELLOW": 0,
+          "RED": 6
+        }
+      }
+    },
+    "consolidated_pre_dspy_all16": {
+      "zone_match": 0.732,
+      "macro_f1": 0.7048,
+      "per_zone_f1": {
+        "GREEN": 0.7968,
+        "YELLOW": 0.5565,
+        "RED": 0.7612
+      },
+      "fpr_on_green": 0.0,
+      "confusion": {
+        "GREEN": {
+          "GREEN": 100,
+          "YELLOW": 0,
+          "RED": 0
+        },
+        "YELLOW": {
+          "GREEN": 35,
+          "YELLOW": 32,
+          "RED": 9
+        },
+        "RED": {
+          "GREEN": 16,
+          "YELLOW": 7,
+          "RED": 51
+        }
+      }
+    }
+  },
+  "escalation_timing": {
+    "no_hysteresis": [
+      {
+        "persona": "amanda",
+        "expected_first_red": 6,
+        "predicted_first_red": null,
+        "error_days": null
+      },
+      {
+        "persona": "arkady",
+        "expected_first_red": 15,
+        "predicted_first_red": 7,
+        "error_days": -8
+      },
+      {
+        "persona": "brook",
+        "expected_first_red": 8,
+        "predicted_first_red": 4,
+        "error_days": -4
+      },
+      {
+        "persona": "dasha",
+        "expected_first_red": 12,
+        "predicted_first_red": 12,
+        "error_days": 0
+      },
+      {
+        "persona": "james",
+        "expected_first_red": 10,
+        "predicted_first_red": 6,
+        "error_days": -4
+      },
+      {
+        "persona": "joseph",
+        "expected_first_red": 13,
+        "predicted_first_red": 6,
+        "error_days": -7
+      },
+      {
+        "persona": "masha",
+        "expected_first_red": 8,
+        "predicted_first_red": 4,
+        "error_days": -4
+      },
+      {
+        "persona": "oleg",
+        "expected_first_red": 11,
+        "predicted_first_red": 7,
+        "error_days": -4
+      },
+      {
+        "persona": "rina",
+        "expected_first_red": 6,
+        "predicted_first_red": 5,
+        "error_days": -1
+      },
+      {
+        "persona": "viktor",
+        "expected_first_red": 7,
+        "predicted_first_red": 6,
+        "error_days": -1
+      }
+    ],
+    "with_hysteresis": [
+      {
+        "persona": "amanda",
+        "expected_first_red": 6,
+        "predicted_first_red": null,
+        "error_days": null
+      },
+      {
+        "persona": "arkady",
+        "expected_first_red": 15,
+        "predicted_first_red": 14,
+        "error_days": -1
+      },
+      {
+        "persona": "brook",
+        "expected_first_red": 8,
+        "predicted_first_red": 5,
+        "error_days": -3
+      },
+      {
+        "persona": "dasha",
+        "expected_first_red": 12,
+        "predicted_first_red": 13,
+        "error_days": 1
+      },
+      {
+        "persona": "james",
+        "expected_first_red": 10,
+        "predicted_first_red": 9,
+        "error_days": -1
+      },
+      {
+        "persona": "joseph",
+        "expected_first_red": 13,
+        "predicted_first_red": 11,
+        "error_days": -2
+      },
+      {
+        "persona": "masha",
+        "expected_first_red": 8,
+        "predicted_first_red": 9,
+        "error_days": 1
+      },
+      {
+        "persona": "oleg",
+        "expected_first_red": 11,
+        "predicted_first_red": 11,
+        "error_days": 0
+      },
+      {
+        "persona": "rina",
+        "expected_first_red": 6,
+        "predicted_first_red": 6,
+        "error_days": 0
+      },
+      {
+        "persona": "viktor",
+        "expected_first_red": 7,
+        "predicted_first_red": 7,
+        "error_days": 0
+      }
+    ],
+    "mae_no_hysteresis": 3.67,
+    "mae_with_hysteresis": 1.0
+  }
+}

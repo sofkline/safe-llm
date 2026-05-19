@@ -1,0 +1,83 @@
+{
+  "persona": "nastya",
+  "backend": "routerai",
+  "calendar": "hand-authored (E9-followup)",
+  "config": {
+    "model": "openai/deepseek/deepseek-v3.2",
+    "generator": "qwen36"
+  },
+  "zone_match": 0.4,
+  "trajectory_exact_match": false,
+  "rows": [
+    {
+      "day": 1,
+      "expected": "GREEN",
+      "predicted": "GREEN",
+      "match": true,
+      "triggered_rules": []
+    },
+    {
+      "day": 2,
+      "expected": "GREEN",
+      "predicted": "GREEN",
+      "match": true,
+      "triggered_rules": []
+    },
+    {
+      "day": 3,
+      "expected": "GREEN",
+      "predicted": "GREEN",
+      "match": true,
+      "triggered_rules": []
+    },
+    {
+      "day": 4,
+      "expected": "GREEN",
+      "predicted": "GREEN",
+      "match": true,
+      "triggered_rules": []
+    },
+    {
+      "day": 5,
+      "expected": "YELLOW",
+      "predicted": "GREEN",
+      "match": false,
+      "triggered_rules": []
+    },
+    {
+      "day": 6,
+      "expected": "YELLOW",
+      "predicted": "GREEN",
+      "match": false,
+      "triggered_rules": []
+    },
+    {
+      "day": 7,
+      "expected": "YELLOW",
+      "predicted": "GREEN",
+      "match": false,
+      "triggered_rules": []
+    },
+    {
+      "day": 8,
+      "expected": "YELLOW",
+      "predicted": "GREEN",
+      "match": false,
+      "triggered_rules": []
+    },
+    {
+      "day": 9,
+      "expected": "YELLOW",
+      "predicted": "GREEN",
+      "match": false,
+      "triggered_rules": []
+    },
+    {
+      "day": 10,
+      "expected": "YELLOW",
+      "predicted": "GREEN",
+      "match": false,
+      "triggered_rules": []
+    }
+  ]
+}

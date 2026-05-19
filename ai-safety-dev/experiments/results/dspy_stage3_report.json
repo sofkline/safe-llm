@@ -1,0 +1,54 @@
+{
+  "model": "openai/deepseek/deepseek-v3.2",
+  "backend": "RouterAI",
+  "auto": "light",
+  "optimizer": "MIPROv2",
+  "split_personas": {
+    "train": [
+      "katya",
+      "james",
+      "dasha",
+      "masha",
+      "oleg",
+      "joseph",
+      "viktor",
+      "dmitry"
+    ],
+    "dev": [
+      "igor",
+      "amanda",
+      "arkady",
+      "rina"
+    ],
+    "test": [
+      "brook",
+      "elena",
+      "nastya",
+      "sara"
+    ]
+  },
+  "day_points": {
+    "train": 123,
+    "dev": 60,
+    "test": 59
+  },
+  "test_score_baseline": 80.0,
+  "test_score_optimised": 80.0,
+  "mipro_best_val_score": 67.5,
+  "result": "no improvement on held-out test personas (80.0 -> 80.0); MIPROv2 prompt rewrite + few-shot demos did not generalise",
+  "thresholds": {
+    "topic_concentration": 0.25,
+    "decision_delegation": 0.25,
+    "emotional_attachment": 0.25,
+    "social_isolation": 0.25,
+    "emotional_isolation": 0.25,
+    "tc_depr_pair": 0.15,
+    "ei_depr_pair": 0.15,
+    "ea_iso_pair": 0.15,
+    "delusional": 0.5,
+    "selfharm": 0.4
+  },
+  "yellow_gate": 2,
+  "metric": "end-to-end ordinal zone match (exact 1.0 / adjacent 0.3 / opposite 0.0), single-day Stage-4 rules",
+  "note": "report reconstructed from run log after a JSON-serialisation crash on the final write; compiled program saved live to dspy_stage3_program.json"
+}

@@ -1,0 +1,60 @@
+{
+  "classifier_model": "openai/deepseek/deepseek-v3.2",
+  "prompt": "MULTI_LABEL_POLICY_PROMPT_V2",
+  "splits": {
+    "calib": {
+      "zone_match": 0.6387,
+      "macro_f1": 0.5778,
+      "per_zone_f1": {
+        "GREEN": 0.7213,
+        "YELLOW": 0.3143,
+        "RED": 0.6977
+      },
+      "fpr_on_green": 0.0,
+      "confusion": {
+        "GREEN": {
+          "GREEN": 66,
+          "YELLOW": 0,
+          "RED": 0
+        },
+        "YELLOW": {
+          "GREEN": 30,
+          "YELLOW": 11,
+          "RED": 15
+        },
+        "RED": {
+          "GREEN": 21,
+          "YELLOW": 3,
+          "RED": 45
+        }
+      }
+    },
+    "holdout": {
+      "zone_match": 0.8136,
+      "macro_f1": 0.7178,
+      "per_zone_f1": {
+        "GREEN": 0.9444,
+        "YELLOW": 0.6207,
+        "RED": 0.5882
+      },
+      "fpr_on_green": 0.0,
+      "confusion": {
+        "GREEN": {
+          "GREEN": 34,
+          "YELLOW": 0,
+          "RED": 0
+        },
+        "YELLOW": {
+          "GREEN": 4,
+          "YELLOW": 9,
+          "RED": 7
+        },
+        "RED": {
+          "GREEN": 0,
+          "YELLOW": 0,
+          "RED": 5
+        }
+      }
+    }
+  }
+}

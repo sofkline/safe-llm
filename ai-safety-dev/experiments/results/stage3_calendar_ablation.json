@@ -1,0 +1,98 @@
+{
+  "off": {
+    "file": "20260519_013918_corpus_eval.jsonl",
+    "zones": {
+      "zone_match": 0.628,
+      "macro_f1": 0.5278,
+      "fpr_on_green": 0.01,
+      "per_zone_f1": {
+        "GREEN": 0.7444,
+        "YELLOW": 0.1412,
+        "RED": 0.698
+      }
+    },
+    "stability_mean": 0.1668,
+    "stability_by_persona": {
+      "james": 0.2693,
+      "viktor": 0.3059,
+      "brook": 0.2655,
+      "amanda": 0.0086,
+      "rina": 0.2771,
+      "joseph": 0.2988,
+      "oleg": 0.2309,
+      "elena": 0.1721,
+      "dmitry": 0.0389,
+      "nastya": 0.121,
+      "sara": 0.0105,
+      "masha": 0.2405,
+      "katya": 0.068,
+      "igor": 0.0285,
+      "dasha": 0.2295,
+      "arkady": 0.1042
+    }
+  },
+  "thematic": {
+    "file": "20260518_234328_corpus_eval.jsonl",
+    "zones": {
+      "zone_match": 0.64,
+      "macro_f1": 0.5542,
+      "fpr_on_green": 0.0,
+      "per_zone_f1": {
+        "GREEN": 0.7576,
+        "YELLOW": 0.2247,
+        "RED": 0.6803
+      }
+    },
+    "stability_mean": 0.1734,
+    "stability_by_persona": {
+      "viktor": 0.3248,
+      "james": 0.289,
+      "brook": 0.2887,
+      "amanda": 0.0043,
+      "joseph": 0.3086,
+      "rina": 0.2896,
+      "oleg": 0.2614,
+      "elena": 0.1851,
+      "dmitry": 0.0425,
+      "nastya": 0.1097,
+      "sara": 0.0107,
+      "masha": 0.2614,
+      "katya": 0.0688,
+      "igor": 0.0261,
+      "dasha": 0.2386,
+      "arkady": 0.0645
+    }
+  },
+  "anchored": {
+    "file": "20260519_023110_corpus_eval.jsonl",
+    "zones": {
+      "zone_match": 0.64,
+      "macro_f1": 0.5515,
+      "fpr_on_green": 0.0,
+      "per_zone_f1": {
+        "GREEN": 0.7491,
+        "YELLOW": 0.2069,
+        "RED": 0.6986
+      }
+    },
+    "stability_mean": 0.1716,
+    "stability_by_persona": {
+      "james": 0.2646,
+      "viktor": 0.3442,
+      "brook": 0.2723,
+      "amanda": 0.01,
+      "rina": 0.2958,
+      "joseph": 0.3118,
+      "oleg": 0.2492,
+      "elena": 0.1709,
+      "dmitry": 0.0451,
+      "nastya": 0.1144,
+      "sara": 0.0037,
+      "masha": 0.2547,
+      "katya": 0.0552,
+      "igor": 0.0159,
+      "dasha": 0.2334,
+      "arkady": 0.1036
+    }
+  }
+}

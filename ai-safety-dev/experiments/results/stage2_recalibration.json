@@ -1,0 +1,105 @@
+{
+  "baseline": {
+    "zone_match": 0.6335,
+    "macro_f1": 0.5674,
+    "per_zone_f1": {
+      "GREEN": 0.7253,
+      "YELLOW": 0.2899,
+      "RED": 0.687
+    },
+    "fpr_on_green": 0.0,
+    "confusion": {
+      "GREEN": {
+        "GREEN": 66,
+        "YELLOW": 0,
+        "RED": 0
+      },
+      "YELLOW": {
+        "GREEN": 29,
+        "YELLOW": 10,
+        "RED": 17
+      },
+      "RED": {
+        "GREEN": 21,
+        "YELLOW": 3,
+        "RED": 45
+      }
+    }
+  },
+  "tau_grid": [
+    0.3,
+    0.5,
+    0.7,
+    0.9
+  ],
+  "optimised_thresholds": {
+    "topic_concentration": 0.3,
+    "decision_delegation": 0.25,
+    "emotional_attachment": 0.5,
+    "social_isolation": 0.25,
+    "emotional_isolation": 0.4,
+    "tc_depr_pair": 0.2,
+    "ei_depr_pair": 0.3,
+    "ea_iso_pair": 0.4,
+    "delusional": 0.5,
+    "selfharm": 0.4
+  },
+  "yellow_gate": 2,
+  "result": "improved",
+  "best_tau": 0.5,
+  "calibration": {
+    "zone_match": 0.6387,
+    "macro_f1": 0.5773,
+    "per_zone_f1": {
+      "GREEN": 0.7253,
+      "YELLOW": 0.3143,
+      "RED": 0.6923
+    },
+    "fpr_on_green": 0.0,
+    "confusion": {
+      "GREEN": {
+        "GREEN": 66,
+        "YELLOW": 0,
+        "RED": 0
+      },
+      "YELLOW": {
+        "GREEN": 29,
+        "YELLOW": 11,
+        "RED": 16
+      },
+      "RED": {
+        "GREEN": 21,
+        "YELLOW": 3,
+        "RED": 45
+      }
+    }
+  },
+  "holdout": {
+    "zone_match": 0.8136,
+    "macro_f1": 0.7178,
+    "per_zone_f1": {
+      "GREEN": 0.9444,
+      "YELLOW": 0.6207,
+      "RED": 0.5882
+    },
+    "fpr_on_green": 0.0,
+    "confusion": {
+      "GREEN": {
+        "GREEN": 34,
+        "YELLOW": 0,
+        "RED": 0
+      },
+      "YELLOW": {
+        "GREEN": 4,
+        "YELLOW": 9,
+        "RED": 7
+      },
+      "RED": {
+        "GREEN": 0,
+        "YELLOW": 0,
+        "RED": 5
+      }
+    }
+  },
+  "calib_holdout_gap": -0.1405
+}

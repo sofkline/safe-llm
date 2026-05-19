@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "experiment": "corpus_eval (chapter4 E2-E7 harness)",
+    "run_at": "2026-05-18T22:58:23",
+    "git_sha": "42eb40f62198b21d352265ae87c343947342f496",
+    "wall_seconds": 904.2,
+    "varied": {
+      "personas_requested": [
+        "dmitry",
+        "rina"
+      ],
+      "personas_evaluated": [
+        "dmitry",
+        "rina"
+      ],
+      "personas_skipped": [],
+      "generator": "qwen36"
+    },
+    "fixed": {
+      "classifier_model": "ollama_chat/gpt-oss-safeguard:latest",
+      "classifier_api_base": "http://localhost:11434",
+      "stage3_model": "ollama_chat/gpt-oss:latest",
+      "stage3_api_base": "http://localhost:11434",
+      "temperature": 0.0,
+      "temperature_note": "live pipeline uses 0.1; harness forces 0 for repeatability",
+      "classifier_system_prompt": "prompts.MULTI_LABEL_POLICY_PROMPT",
+      "stage3_prompt": "behavioral_llm._build_prompt (current repo version)",
+      "response_format": "schemas.SafetyMultilabelSchema",
+      "corpus_dir": "/home/newub/w/co/univer/Kursoviki/Sophiya/safe-llm/ai-safety-dev/experiments/results/pilot",
+      "concurrency": 3,
+      "limit_days": null
+    },
+    "metrics": {
+      "n_day_points": 27,
+      "n_personas": 2,
+      "zone_match_rate": 0.4074,
+      "full_trajectory_match_rate": 0.0,
+      "macro_f1": 0.418,
+      "per_zone_f1": {
+        "GREEN": 0.4762,
+        "YELLOW": 0.1111,
+        "RED": 0.6667
+      },
+      "fpr_on_green_personas": 0.0,
+      "confusion_expected_x_predicted": {
+        "GREEN": {
+          "GREEN": 5,
+          "YELLOW": 0,
+          "RED": 0
+        },
+        "YELLOW": {
+          "GREEN": 11,
+          "YELLOW": 1,
+          "RED": 5
+        },
+        "RED": {
+          "GREEN": 0,
+          "YELLOW": 0,
+          "RED": 5
+        }
+      },
+      "day_of_first_red": {
+        "dmitry": 10,
+        "rina": 5
+      },
+      "trajectory_exact_match": {
+        "dmitry": false,
+        "rina": false
+      }
+    }
+  },
+  "metrics": {
+    "n_day_points": 27,
+    "n_personas": 2,
+    "zone_match_rate": 0.4074,
+    "full_trajectory_match_rate": 0.0,
+    "macro_f1": 0.418,
+    "per_zone_f1": {
+      "GREEN": 0.4762,
+      "YELLOW": 0.1111,
+      "RED": 0.6667
+    },
+    "fpr_on_green_personas": 0.0,
+    "confusion_expected_x_predicted": {
+      "GREEN": {
+        "GREEN": 5,
+        "YELLOW": 0,
+        "RED": 0
+      },
+      "YELLOW": {
+        "GREEN": 11,
+        "YELLOW": 1,
+        "RED": 5
+      },
+      "RED": {
+        "GREEN": 0,
+        "YELLOW": 0,
+        "RED": 5
+      }
+    },
+    "day_of_first_red": {
+      "dmitry": 10,
+      "rina": 5
+    },
+    "trajectory_exact_match": {
+      "dmitry": false,
+      "rina": false
+    }
+  },
+  "rows_file": "20260518_224319_corpus_eval.jsonl"
+}

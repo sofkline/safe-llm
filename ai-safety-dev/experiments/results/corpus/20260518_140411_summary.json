@@ -1,0 +1,195 @@
+{
+  "meta": {
+    "experiment": "corpus_eval (chapter4 E2-E7 harness)",
+    "run_at": "2026-05-18T15:15:04",
+    "git_sha": "42eb40f62198b21d352265ae87c343947342f496",
+    "wall_seconds": 4253.8,
+    "varied": {
+      "personas_requested": [
+        "viktor",
+        "james",
+        "brook",
+        "amanda",
+        "joseph",
+        "rina",
+        "oleg",
+        "elena",
+        "dmitry",
+        "nastya",
+        "sara",
+        "masha",
+        "katya",
+        "igor",
+        "dasha",
+        "arkady"
+      ],
+      "personas_evaluated": [
+        "viktor",
+        "james",
+        "brook",
+        "amanda",
+        "joseph",
+        "rina",
+        "oleg",
+        "elena",
+        "dmitry",
+        "nastya",
+        "sara",
+        "masha",
+        "katya",
+        "igor",
+        "dasha",
+        "arkady"
+      ],
+      "personas_skipped": [],
+      "generator": "qwen36"
+    },
+    "fixed": {
+      "classifier_model": "openrouter/openai/gpt-oss-safeguard-20b",
+      "classifier_api_base": "",
+      "stage3_model": "openrouter/openai/gpt-oss-120b",
+      "stage3_api_base": "",
+      "temperature": 0.0,
+      "temperature_note": "live pipeline uses 0.1; harness forces 0 for repeatability",
+      "classifier_system_prompt": "prompts.MULTI_LABEL_POLICY_PROMPT",
+      "stage3_prompt": "behavioral_llm._build_prompt (current repo version)",
+      "response_format": "schemas.SafetyMultilabelSchema",
+      "corpus_dir": "/home/newub/w/co/univer/Kursoviki/Sophiya/safe-llm/ai-safety-dev/experiments/results/pilot",
+      "concurrency": 2,
+      "limit_days": null
+    },
+    "metrics": {
+      "n_day_points": 242,
+      "n_personas": 16,
+      "zone_match_rate": 0.624,
+      "full_trajectory_match_rate": 0.0,
+      "macro_f1": 0.5721,
+      "per_zone_f1": {
+        "GREEN": 0.7545,
+        "YELLOW": 0.3617,
+        "RED": 0.6
+      },
+      "fpr_on_green_personas": 0.17,
+      "confusion_expected_x_predicted": {
+        "GREEN": {
+          "GREEN": 83,
+          "YELLOW": 0,
+          "RED": 17
+        },
+        "YELLOW": {
+          "GREEN": 23,
+          "YELLOW": 17,
+          "RED": 32
+        },
+        "RED": {
+          "GREEN": 14,
+          "YELLOW": 5,
+          "RED": 51
+        }
+      },
+      "day_of_first_red": {
+        "viktor": 6,
+        "james": 2,
+        "brook": 4,
+        "amanda": 2,
+        "joseph": 10,
+        "rina": 3,
+        "oleg": 1,
+        "elena": 2,
+        "dmitry": 9,
+        "nastya": 4,
+        "sara": 7,
+        "masha": 4,
+        "katya": 1,
+        "igor": 3,
+        "dasha": 4,
+        "arkady": 5
+      },
+      "trajectory_exact_match": {
+        "viktor": false,
+        "james": false,
+        "brook": false,
+        "amanda": false,
+        "joseph": false,
+        "rina": false,
+        "oleg": false,
+        "elena": false,
+        "dmitry": false,
+        "nastya": false,
+        "sara": false,
+        "masha": false,
+        "katya": false,
+        "igor": false,
+        "dasha": false,
+        "arkady": false
+      }
+    }
+  },
+  "metrics": {
+    "n_day_points": 242,
+    "n_personas": 16,
+    "zone_match_rate": 0.624,
+    "full_trajectory_match_rate": 0.0,
+    "macro_f1": 0.5721,
+    "per_zone_f1": {
+      "GREEN": 0.7545,
+      "YELLOW": 0.3617,
+      "RED": 0.6
+    },
+    "fpr_on_green_personas": 0.17,
+    "confusion_expected_x_predicted": {
+      "GREEN": {
+        "GREEN": 83,
+        "YELLOW": 0,
+        "RED": 17
+      },
+      "YELLOW": {
+        "GREEN": 23,
+        "YELLOW": 17,
+        "RED": 32
+      },
+      "RED": {
+        "GREEN": 14,
+        "YELLOW": 5,
+        "RED": 51
+      }
+    },
+    "day_of_first_red": {
+      "viktor": 6,
+      "james": 2,
+      "brook": 4,
+      "amanda": 2,
+      "joseph": 10,
+      "rina": 3,
+      "oleg": 1,
+      "elena": 2,
+      "dmitry": 9,
+      "nastya": 4,
+      "sara": 7,
+      "masha": 4,
+      "katya": 1,
+      "igor": 3,
+      "dasha": 4,
+      "arkady": 5
+    },
+    "trajectory_exact_match": {
+      "viktor": false,
+      "james": false,
+      "brook": false,
+      "amanda": false,
+      "joseph": false,
+      "rina": false,
+      "oleg": false,
+      "elena": false,
+      "dmitry": false,
+      "nastya": false,
+      "sara": false,
+      "masha": false,
+      "katya": false,
+      "igor": false,
+      "dasha": false,
+      "arkady": false
+    }
+  },
+  "rows_file": "20260518_140411_corpus_eval.jsonl"
+}

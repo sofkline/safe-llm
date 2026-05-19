@@ -1,0 +1,451 @@
+{
+  "baseline": {
+    "calib": {
+      "zone_match": 0.6492,
+      "macro_f1": 0.6063,
+      "per_zone_f1": {
+        "GREEN": 0.7135,
+        "YELLOW": 0.3947,
+        "RED": 0.7107
+      },
+      "fpr_on_green": 0.0,
+      "confusion": {
+        "GREEN": {
+          "GREEN": 66,
+          "YELLOW": 0,
+          "RED": 0
+        },
+        "YELLOW": {
+          "GREEN": 32,
+          "YELLOW": 15,
+          "RED": 9
+        },
+        "RED": {
+          "GREEN": 21,
+          "YELLOW": 5,
+          "RED": 43
+        }
+      }
+    },
+    "holdout": {
+      "zone_match": 0.8475,
+      "macro_f1": 0.7852,
+      "per_zone_f1": {
+        "GREEN": 0.9315,
+        "YELLOW": 0.7097,
+        "RED": 0.7143
+      },
+      "fpr_on_green": 0.0,
+      "confusion": {
+        "GREEN": {
+          "GREEN": 34,
+          "YELLOW": 0,
+          "RED": 0
+        },
+        "YELLOW": {
+          "GREEN": 5,
+          "YELLOW": 11,
+          "RED": 4
+        },
+        "RED": {
+          "GREEN": 0,
+          "YELLOW": 0,
+          "RED": 5
+        }
+      }
+    },
+    "params": {
+      "k_red": 2,
+      "k_yellow": 1,
+      "k_down": 1
+    }
+  },
+  "spike1_sticky_hysteresis": {
+    "grid": [
+      {
+        "k_down": 1,
+        "calib": {
+          "zone_match": 0.6492,
+          "macro_f1": 0.6063,
+          "per_zone_f1": {
+            "GREEN": 0.7135,
+            "YELLOW": 0.3947,
+            "RED": 0.7107
+          },
+          "fpr_on_green": 0.0,
+          "confusion": {
+            "GREEN": {
+              "GREEN": 66,
+              "YELLOW": 0,
+              "RED": 0
+            },
+            "YELLOW": {
+              "GREEN": 32,
+              "YELLOW": 15,
+              "RED": 9
+            },
+            "RED": {
+              "GREEN": 21,
+              "YELLOW": 5,
+              "RED": 43
+            }
+          }
+        }
+      },
+      {
+        "k_down": 2,
+        "calib": {
+          "zone_match": 0.6492,
+          "macro_f1": 0.6135,
+          "per_zone_f1": {
+            "GREEN": 0.7111,
+            "YELLOW": 0.4359,
+            "RED": 0.6935
+          },
+          "fpr_on_green": 0.0303,
+          "confusion": {
+            "GREEN": {
+              "GREEN": 64,
+              "YELLOW": 0,
+              "RED": 2
+            },
+            "YELLOW": {
+              "GREEN": 29,
+              "YELLOW": 17,
+              "RED": 10
+            },
+            "RED": {
+              "GREEN": 21,
+              "YELLOW": 5,
+              "RED": 43
+            }
+          }
+        }
+      },
+      {
+        "k_down": 3,
+        "calib": {
+          "zone_match": 0.6597,
+          "macro_f1": 0.6299,
+          "per_zone_f1": {
+            "GREEN": 0.7159,
+            "YELLOW": 0.481,
+            "RED": 0.6929
+          },
+          "fpr_on_green": 0.0455,
+          "confusion": {
+            "GREEN": {
+              "GREEN": 63,
+              "YELLOW": 0,
+              "RED": 3
+            },
+            "YELLOW": {
+              "GREEN": 26,
+              "YELLOW": 19,
+              "RED": 11
+            },
+            "RED": {
+              "GREEN": 21,
+              "YELLOW": 4,
+              "RED": 44
+            }
+          }
+        },
+        "holdout": {
+          "zone_match": 0.8136,
+          "macro_f1": 0.7113,
+          "per_zone_f1": {
+            "GREEN": 0.9577,
+            "YELLOW": 0.6207,
+            "RED": 0.5556
+          },
+          "fpr_on_green": 0.0,
+          "confusion": {
+            "GREEN": {
+              "GREEN": 34,
+              "YELLOW": 0,
+              "RED": 0
+            },
+            "YELLOW": {
+              "GREEN": 3,
+              "YELLOW": 9,
+              "RED": 8
+            },
+            "RED": {
+              "GREEN": 0,
+              "YELLOW": 0,
+              "RED": 5
+            }
+          }
+        }
+      }
+    ],
+    "best_k_down": 3,
+    "holdout": {
+      "zone_match": 0.8136,
+      "macro_f1": 0.7113,
+      "per_zone_f1": {
+        "GREEN": 0.9577,
+        "YELLOW": 0.6207,
+        "RED": 0.5556
+      },
+      "fpr_on_green": 0.0,
+      "confusion": {
+        "GREEN": {
+          "GREEN": 34,
+          "YELLOW": 0,
+          "RED": 0
+        },
+        "YELLOW": {
+          "GREEN": 3,
+          "YELLOW": 9,
+          "RED": 8
+        },
+        "RED": {
+          "GREEN": 0,
+          "YELLOW": 0,
+          "RED": 5
+        }
+      }
+    }
+  },
+  "spike2_ewma": {
+    "grid": [
+      {
+        "alpha": 1.0,
+        "calib": {
+          "zone_match": 0.6492,
+          "macro_f1": 0.6063,
+          "per_zone_f1": {
+            "GREEN": 0.7135,
+            "YELLOW": 0.3947,
+            "RED": 0.7107
+          },
+          "fpr_on_green": 0.0,
+          "confusion": {
+            "GREEN": {
+              "GREEN": 66,
+              "YELLOW": 0,
+              "RED": 0
+            },
+            "YELLOW": {
+              "GREEN": 32,
+              "YELLOW": 15,
+              "RED": 9
+            },
+            "RED": {
+              "GREEN": 21,
+              "YELLOW": 5,
+              "RED": 43
+            }
+          }
+        },
+        "holdout": {
+          "zone_match": 0.8475,
+          "macro_f1": 0.7852,
+          "per_zone_f1": {
+            "GREEN": 0.9315,
+            "YELLOW": 0.7097,
+            "RED": 0.7143
+          },
+          "fpr_on_green": 0.0,
+          "confusion": {
+            "GREEN": {
+              "GREEN": 34,
+              "YELLOW": 0,
+              "RED": 0
+            },
+            "YELLOW": {
+              "GREEN": 5,
+              "YELLOW": 11,
+              "RED": 4
+            },
+            "RED": {
+              "GREEN": 0,
+              "YELLOW": 0,
+              "RED": 5
+            }
+          }
+        }
+      },
+      {
+        "alpha": 0.7,
+        "calib": {
+          "zone_match": 0.6387,
+          "macro_f1": 0.6043,
+          "per_zone_f1": {
+            "GREEN": 0.7182,
+            "YELLOW": 0.4337,
+            "RED": 0.661
+          },
+          "fpr_on_green": 0.0152,
+          "confusion": {
+            "GREEN": {
+              "GREEN": 65,
+              "YELLOW": 0,
+              "RED": 1
+            },
+            "YELLOW": {
+              "GREEN": 29,
+              "YELLOW": 18,
+              "RED": 9
+            },
+            "RED": {
+              "GREEN": 21,
+              "YELLOW": 9,
+              "RED": 39
+            }
+          }
+        }
+      },
+      {
+        "alpha": 0.5,
+        "calib": {
+          "zone_match": 0.6387,
+          "macro_f1": 0.6043,
+          "per_zone_f1": {
+            "GREEN": 0.7182,
+            "YELLOW": 0.4337,
+            "RED": 0.661
+          },
+          "fpr_on_green": 0.0152,
+          "confusion": {
+            "GREEN": {
+              "GREEN": 65,
+              "YELLOW": 0,
+              "RED": 1
+            },
+            "YELLOW": {
+              "GREEN": 29,
+              "YELLOW": 18,
+              "RED": 9
+            },
+            "RED": {
+              "GREEN": 21,
+              "YELLOW": 9,
+              "RED": 39
+            }
+          }
+        }
+      },
+      {
+        "alpha": 0.3,
+        "calib": {
+          "zone_match": 0.6178,
+          "macro_f1": 0.577,
+          "per_zone_f1": {
+            "GREEN": 0.7174,
+            "YELLOW": 0.3765,
+            "RED": 0.6372
+          },
+          "fpr_on_green": 0.0,
+          "confusion": {
+            "GREEN": {
+              "GREEN": 66,
+              "YELLOW": 0,
+              "RED": 0
+            },
+            "YELLOW": {
+              "GREEN": 32,
+              "YELLOW": 16,
+              "RED": 8
+            },
+            "RED": {
+              "GREEN": 20,
+              "YELLOW": 13,
+              "RED": 36
+            }
+          }
+        }
+      }
+    ],
+    "best_alpha": 1.0,
+    "holdout": {
+      "zone_match": 0.8475,
+      "macro_f1": 0.7852,
+      "per_zone_f1": {
+        "GREEN": 0.9315,
+        "YELLOW": 0.7097,
+        "RED": 0.7143
+      },
+      "fpr_on_green": 0.0,
+      "confusion": {
+        "GREEN": {
+          "GREEN": 34,
+          "YELLOW": 0,
+          "RED": 0
+        },
+        "YELLOW": {
+          "GREEN": 5,
+          "YELLOW": 11,
+          "RED": 4
+        },
+        "RED": {
+          "GREEN": 0,
+          "YELLOW": 0,
+          "RED": 5
+        }
+      }
+    }
+  },
+  "spike3_ensemble": {
+    "models": [
+      "deepseek-v3.2",
+      "gpt-oss-120b"
+    ],
+    "calib": {
+      "zone_match": 0.6545,
+      "macro_f1": 0.6346,
+      "per_zone_f1": {
+        "GREEN": 0.72,
+        "YELLOW": 0.5053,
+        "RED": 0.6786
+      },
+      "fpr_on_green": 0.0455,
+      "confusion": {
+        "GREEN": {
+          "GREEN": 63,
+          "YELLOW": 3,
+          "RED": 0
+        },
+        "YELLOW": {
+          "GREEN": 27,
+          "YELLOW": 24,
+          "RED": 5
+        },
+        "RED": {
+          "GREEN": 19,
+          "YELLOW": 12,
+          "RED": 38
+        }
+      }
+    },
+    "holdout": {
+      "zone_match": 0.9153,
+      "macro_f1": 0.8469,
+      "per_zone_f1": {
+        "GREEN": 0.9851,
+        "YELLOW": 0.8889,
+        "RED": 0.6667
+      },
+      "fpr_on_green": 0.0294,
+      "confusion": {
+        "GREEN": {
+          "GREEN": 33,
+          "YELLOW": 0,
+          "RED": 1
+        },
+        "YELLOW": {
+          "GREEN": 0,
+          "YELLOW": 16,
+          "RED": 4
+        },
+        "RED": {
+          "GREEN": 0,
+          "YELLOW": 0,
+          "RED": 5
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "note": "gpt-oss-120b corpus 20260519_005707 re-scored after the danger_agg confidence-gating fix. Original on-disk predicted_zone values are pre-fix (buggy). Stage-4 replay over stored danger_predicts_raw with optimised thresholds.",
+  "source_corpus": "20260519_005707_corpus_eval.jsonl",
+  "metrics": {
+    "zone_match": 0.72,
+    "macro_f1": 0.6928,
+    "per_zone_f1": {
+      "GREEN": 0.8117,
+      "YELLOW": 0.5556,
+      "RED": 0.7111
+    },
+    "fpr_on_green": 0.03,
+    "confusion": {
+      "GREEN": {
+        "GREEN": 97,
+        "YELLOW": 3,
+        "RED": 0
+      },
+      "YELLOW": {
+        "GREEN": 28,
+        "YELLOW": 35,
+        "RED": 13
+      },
+      "RED": {
+        "GREEN": 14,
+        "YELLOW": 12,
+        "RED": 48
+      }
+    }
+  }
+}

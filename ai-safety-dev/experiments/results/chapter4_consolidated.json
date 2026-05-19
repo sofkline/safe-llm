@@ -1,0 +1,624 @@
+{
+  "baseline_16p_clean (qwen36, local)": {
+    "n_day_points": 242,
+    "n_personas": 16,
+    "zone_match_rate": 0.657,
+    "macro_f1": 0.5631,
+    "per_zone_f1": {
+      "GREEN": 0.7705,
+      "YELLOW": 0.1928,
+      "RED": 0.7261
+    },
+    "fpr_on_green": 0.06,
+    "confusion": {
+      "GREEN": {
+        "GREEN": 94,
+        "YELLOW": 0,
+        "RED": 6
+      },
+      "YELLOW": {
+        "GREEN": 40,
+        "YELLOW": 8,
+        "RED": 24
+      },
+      "RED": {
+        "GREEN": 10,
+        "YELLOW": 3,
+        "RED": 57
+      }
+    },
+    "full_trajectory_match_rate": 0.0,
+    "clf_failed_total": 3,
+    "n_sessions": 544,
+    "per_persona": {
+      "amanda": {
+        "class": "escalation",
+        "days": 10,
+        "zone_match": 0.2,
+        "trajectory_exact": false,
+        "expected_first_red": 6,
+        "predicted_first_red": null,
+        "clf_failed": 0
+      },
+      "arkady": {
+        "class": "escalation",
+        "days": 30,
+        "zone_match": 0.533,
+        "trajectory_exact": false,
+        "expected_first_red": 15,
+        "predicted_first_red": 7,
+        "clf_failed": 0
+      },
+      "brook": {
+        "class": "escalation",
+        "days": 14,
+        "zone_match": 0.714,
+        "trajectory_exact": false,
+        "expected_first_red": 8,
+        "predicted_first_red": 4,
+        "clf_failed": 0
+      },
+      "dasha": {
+        "class": "escalation",
+        "days": 16,
+        "zone_match": 0.812,
+        "trajectory_exact": false,
+        "expected_first_red": 12,
+        "predicted_first_red": 12,
+        "clf_failed": 0
+      },
+      "dmitry": {
+        "class": "sustained_yellow",
+        "days": 13,
+        "zone_match": 0.231,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 10,
+        "clf_failed": 0
+      },
+      "elena": {
+        "class": "recovery",
+        "days": 21,
+        "zone_match": 0.524,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 1,
+        "clf_failed": 0
+      },
+      "igor": {
+        "class": "control",
+        "days": 14,
+        "zone_match": 0.857,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 5,
+        "clf_failed": 0
+      },
+      "james": {
+        "class": "escalation",
+        "days": 14,
+        "zone_match": 0.714,
+        "trajectory_exact": false,
+        "expected_first_red": 10,
+        "predicted_first_red": 6,
+        "clf_failed": 0
+      },
+      "joseph": {
+        "class": "escalation",
+        "days": 21,
+        "zone_match": 0.714,
+        "trajectory_exact": false,
+        "expected_first_red": 13,
+        "predicted_first_red": 6,
+        "clf_failed": 0
+      },
+      "katya": {
+        "class": "control",
+        "days": 14,
+        "zone_match": 0.857,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 3,
+        "clf_failed": 0
+      },
+      "masha": {
+        "class": "escalation",
+        "days": 10,
+        "zone_match": 0.8,
+        "trajectory_exact": false,
+        "expected_first_red": 8,
+        "predicted_first_red": 4,
+        "clf_failed": 0
+      },
+      "nastya": {
+        "class": "sustained_yellow",
+        "days": 10,
+        "zone_match": 0.4,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 7,
+        "clf_failed": 0
+      },
+      "oleg": {
+        "class": "escalation",
+        "days": 21,
+        "zone_match": 0.714,
+        "trajectory_exact": false,
+        "expected_first_red": 11,
+        "predicted_first_red": 7,
+        "clf_failed": 0
+      },
+      "rina": {
+        "class": "escalation",
+        "days": 6,
+        "zone_match": 0.667,
+        "trajectory_exact": false,
+        "expected_first_red": 6,
+        "predicted_first_red": 5,
+        "clf_failed": 0
+      },
+      "sara": {
+        "class": "control",
+        "days": 14,
+        "zone_match": 0.929,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 13,
+        "clf_failed": 0
+      },
+      "viktor": {
+        "class": "escalation",
+        "days": 14,
+        "zone_match": 0.786,
+        "trajectory_exact": false,
+        "expected_first_red": 7,
+        "predicted_first_red": 6,
+        "clf_failed": 3
+      }
+    }
+  },
+  "e6_qwen36_11p (local)": {
+    "n_day_points": 158,
+    "n_personas": 11,
+    "zone_match_rate": 0.6203,
+    "macro_f1": 0.5425,
+    "per_zone_f1": {
+      "GREEN": 0.7397,
+      "YELLOW": 0.1587,
+      "RED": 0.729
+    },
+    "fpr_on_green": 0.0357,
+    "confusion": {
+      "GREEN": {
+        "GREEN": 54,
+        "YELLOW": 0,
+        "RED": 2
+      },
+      "YELLOW": {
+        "GREEN": 31,
+        "YELLOW": 5,
+        "RED": 20
+      },
+      "RED": {
+        "GREEN": 5,
+        "YELLOW": 2,
+        "RED": 39
+      }
+    },
+    "full_trajectory_match_rate": 0.0,
+    "clf_failed_total": 3,
+    "n_sessions": 344,
+    "per_persona": {
+      "amanda": {
+        "class": "escalation",
+        "days": 10,
+        "zone_match": 0.2,
+        "trajectory_exact": false,
+        "expected_first_red": 6,
+        "predicted_first_red": null,
+        "clf_failed": 0
+      },
+      "brook": {
+        "class": "escalation",
+        "days": 14,
+        "zone_match": 0.714,
+        "trajectory_exact": false,
+        "expected_first_red": 8,
+        "predicted_first_red": 4,
+        "clf_failed": 0
+      },
+      "dmitry": {
+        "class": "sustained_yellow",
+        "days": 13,
+        "zone_match": 0.231,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 10,
+        "clf_failed": 0
+      },
+      "elena": {
+        "class": "recovery",
+        "days": 21,
+        "zone_match": 0.524,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 1,
+        "clf_failed": 0
+      },
+      "james": {
+        "class": "escalation",
+        "days": 14,
+        "zone_match": 0.714,
+        "trajectory_exact": false,
+        "expected_first_red": 10,
+        "predicted_first_red": 6,
+        "clf_failed": 0
+      },
+      "joseph": {
+        "class": "escalation",
+        "days": 21,
+        "zone_match": 0.714,
+        "trajectory_exact": false,
+        "expected_first_red": 13,
+        "predicted_first_red": 6,
+        "clf_failed": 0
+      },
+      "nastya": {
+        "class": "sustained_yellow",
+        "days": 10,
+        "zone_match": 0.4,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 7,
+        "clf_failed": 0
+      },
+      "oleg": {
+        "class": "escalation",
+        "days": 21,
+        "zone_match": 0.714,
+        "trajectory_exact": false,
+        "expected_first_red": 11,
+        "predicted_first_red": 7,
+        "clf_failed": 0
+      },
+      "rina": {
+        "class": "escalation",
+        "days": 6,
+        "zone_match": 0.667,
+        "trajectory_exact": false,
+        "expected_first_red": 6,
+        "predicted_first_red": 5,
+        "clf_failed": 0
+      },
+      "sara": {
+        "class": "control",
+        "days": 14,
+        "zone_match": 0.929,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 13,
+        "clf_failed": 0
+      },
+      "viktor": {
+        "class": "escalation",
+        "days": 14,
+        "zone_match": 0.786,
+        "trajectory_exact": false,
+        "expected_first_red": 7,
+        "predicted_first_red": 6,
+        "clf_failed": 3
+      }
+    }
+  },
+  "e6_deepseek_11p (local)": {
+    "n_day_points": 156,
+    "n_personas": 11,
+    "zone_match_rate": 0.5705,
+    "macro_f1": 0.4994,
+    "per_zone_f1": {
+      "GREEN": 0.6667,
+      "YELLOW": 0.0606,
+      "RED": 0.7708
+    },
+    "fpr_on_green": 0.0385,
+    "confusion": {
+      "GREEN": {
+        "GREEN": 50,
+        "YELLOW": 0,
+        "RED": 2
+      },
+      "YELLOW": {
+        "GREEN": 45,
+        "YELLOW": 2,
+        "RED": 8
+      },
+      "RED": {
+        "GREEN": 3,
+        "YELLOW": 9,
+        "RED": 37
+      }
+    },
+    "full_trajectory_match_rate": 0.0909,
+    "clf_failed_total": 0,
+    "n_sessions": 350,
+    "per_persona": {
+      "amanda": {
+        "class": "escalation",
+        "days": 10,
+        "zone_match": 0.7,
+        "trajectory_exact": false,
+        "expected_first_red": 6,
+        "predicted_first_red": 3,
+        "clf_failed": 0
+      },
+      "brook": {
+        "class": "escalation",
+        "days": 14,
+        "zone_match": 0.714,
+        "trajectory_exact": false,
+        "expected_first_red": 8,
+        "predicted_first_red": 6,
+        "clf_failed": 0
+      },
+      "dmitry": {
+        "class": "sustained_yellow",
+        "days": 17,
+        "zone_match": 0.176,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 4,
+        "clf_failed": 0
+      },
+      "elena": {
+        "class": "recovery",
+        "days": 21,
+        "zone_match": 0.571,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 6,
+        "clf_failed": 0
+      },
+      "james": {
+        "class": "escalation",
+        "days": 14,
+        "zone_match": 0.714,
+        "trajectory_exact": false,
+        "expected_first_red": 10,
+        "predicted_first_red": 10,
+        "clf_failed": 0
+      },
+      "joseph": {
+        "class": "escalation",
+        "days": 21,
+        "zone_match": 0.429,
+        "trajectory_exact": false,
+        "expected_first_red": 13,
+        "predicted_first_red": 1,
+        "clf_failed": 0
+      },
+      "nastya": {
+        "class": "sustained_yellow",
+        "days": 1,
+        "zone_match": 0.0,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 10,
+        "clf_failed": 0
+      },
+      "oleg": {
+        "class": "escalation",
+        "days": 21,
+        "zone_match": 0.524,
+        "trajectory_exact": false,
+        "expected_first_red": 11,
+        "predicted_first_red": 1,
+        "clf_failed": 0
+      },
+      "rina": {
+        "class": "escalation",
+        "days": 10,
+        "zone_match": 0.6,
+        "trajectory_exact": false,
+        "expected_first_red": 6,
+        "predicted_first_red": 6,
+        "clf_failed": 0
+      },
+      "sara": {
+        "class": "control",
+        "days": 14,
+        "zone_match": 1.0,
+        "trajectory_exact": true,
+        "expected_first_red": null,
+        "predicted_first_red": null,
+        "clf_failed": 0
+      },
+      "viktor": {
+        "class": "escalation",
+        "days": 13,
+        "zone_match": 0.538,
+        "trajectory_exact": false,
+        "expected_first_red": 7,
+        "predicted_first_red": 7,
+        "clf_failed": 0
+      }
+    }
+  },
+  "baseline_16p_DEGRADED (qwen36, openrouter)": {
+    "n_day_points": 242,
+    "n_personas": 16,
+    "zone_match_rate": 0.624,
+    "macro_f1": 0.5721,
+    "per_zone_f1": {
+      "GREEN": 0.7545,
+      "YELLOW": 0.3617,
+      "RED": 0.6
+    },
+    "fpr_on_green": 0.17,
+    "confusion": {
+      "GREEN": {
+        "GREEN": 83,
+        "YELLOW": 0,
+        "RED": 17
+      },
+      "YELLOW": {
+        "GREEN": 23,
+        "YELLOW": 17,
+        "RED": 32
+      },
+      "RED": {
+        "GREEN": 14,
+        "YELLOW": 5,
+        "RED": 51
+      }
+    },
+    "full_trajectory_match_rate": 0.0,
+    "clf_failed_total": 40,
+    "n_sessions": 544,
+    "per_persona": {
+      "amanda": {
+        "class": "escalation",
+        "days": 10,
+        "zone_match": 0.1,
+        "trajectory_exact": false,
+        "expected_first_red": 6,
+        "predicted_first_red": 2,
+        "clf_failed": 7
+      },
+      "arkady": {
+        "class": "escalation",
+        "days": 30,
+        "zone_match": 0.4,
+        "trajectory_exact": false,
+        "expected_first_red": 15,
+        "predicted_first_red": 5,
+        "clf_failed": 0
+      },
+      "brook": {
+        "class": "escalation",
+        "days": 14,
+        "zone_match": 0.786,
+        "trajectory_exact": false,
+        "expected_first_red": 8,
+        "predicted_first_red": 4,
+        "clf_failed": 4
+      },
+      "dasha": {
+        "class": "escalation",
+        "days": 16,
+        "zone_match": 0.625,
+        "trajectory_exact": false,
+        "expected_first_red": 12,
+        "predicted_first_red": 4,
+        "clf_failed": 0
+      },
+      "dmitry": {
+        "class": "sustained_yellow",
+        "days": 13,
+        "zone_match": 0.231,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 9,
+        "clf_failed": 0
+      },
+      "elena": {
+        "class": "recovery",
+        "days": 21,
+        "zone_match": 0.571,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 2,
+        "clf_failed": 2
+      },
+      "igor": {
+        "class": "control",
+        "days": 14,
+        "zone_match": 0.857,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 3,
+        "clf_failed": 0
+      },
+      "james": {
+        "class": "escalation",
+        "days": 14,
+        "zone_match": 0.643,
+        "trajectory_exact": false,
+        "expected_first_red": 10,
+        "predicted_first_red": 2,
+        "clf_failed": 9
+      },
+      "joseph": {
+        "class": "escalation",
+        "days": 21,
+        "zone_match": 0.762,
+        "trajectory_exact": false,
+        "expected_first_red": 13,
+        "predicted_first_red": 10,
+        "clf_failed": 6
+      },
+      "katya": {
+        "class": "control",
+        "days": 14,
+        "zone_match": 0.643,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 1,
+        "clf_failed": 0
+      },
+      "masha": {
+        "class": "escalation",
+        "days": 10,
+        "zone_match": 0.8,
+        "trajectory_exact": false,
+        "expected_first_red": 8,
+        "predicted_first_red": 4,
+        "clf_failed": 1
+      },
+      "nastya": {
+        "class": "sustained_yellow",
+        "days": 10,
+        "zone_match": 0.4,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 4,
+        "clf_failed": 0
+      },
+      "oleg": {
+        "class": "escalation",
+        "days": 21,
+        "zone_match": 0.714,
+        "trajectory_exact": false,
+        "expected_first_red": 11,
+        "predicted_first_red": 1,
+        "clf_failed": 3
+      },
+      "rina": {
+        "class": "escalation",
+        "days": 6,
+        "zone_match": 0.833,
+        "trajectory_exact": false,
+        "expected_first_red": 6,
+        "predicted_first_red": 3,
+        "clf_failed": 1
+      },
+      "sara": {
+        "class": "control",
+        "days": 14,
+        "zone_match": 0.857,
+        "trajectory_exact": false,
+        "expected_first_red": null,
+        "predicted_first_red": 7,
+        "clf_failed": 0
+      },
+      "viktor": {
+        "class": "escalation",
+        "days": 14,
+        "zone_match": 0.857,
+        "trajectory_exact": false,
+        "expected_first_red": 7,
+        "predicted_first_red": 6,
+        "clf_failed": 7
+      }
+    }
+  }
+}
