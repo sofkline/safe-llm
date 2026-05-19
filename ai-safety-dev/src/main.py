@@ -40,7 +40,7 @@ async def wrapped_lifespan(app_):
         async with old(app_) as _:
             yield
     finally:
-        weekly_scheduler(wait=False)
+        weekly_scheduler.shutdown(wait=False)
         behavioral_scheduler.shutdown(wait=False)
         scheduler.shutdown(wait=False)
 

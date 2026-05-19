@@ -21,7 +21,13 @@ SUMMARY_KEYS = ["key_topics", "life_events", "emotional_tone", "ai_relationship_
 
 
 def _format_calendar(summaries) -> str:
-    """Format notable DailySummary rows into compact calendar text for the prompt."""
+    """Format notable DailySummary rows into compact calendar text for the prompt.
+
+    If a summary carries `behavioral_scores` / `risk_zone` (corpus-eval calendar
+    entries do; production DailySummary rows may not), a numeric digest — the
+    prior day's risk zone and its peak behavioural score — is appended so Stage 3
+    can anchor today's intensity to the prior trend instead of re-deriving the
+    seven scores fresh each day with no numeric memory."""
     if not summaries:
         return ""
     lines = ["=== CALENDAR (notable days only) ==="]
@@ -30,7 +36,14 @@ def _format_calendar(summaries) -> str:
         events = ", ".join(s.life_events) if s.life_events else "none"
         tone = s.emotional_tone or "neutral"
         markers = ", ".join(s.ai_relationship_markers) if s.ai_relationship_markers else "none"
-        lines.append(f"[{s.summary_date}] Topics: {topics} | Events: {events} | Tone: {tone} | Markers: {markers}")
+        line = (f"[{s.summary_date}] Topics: {topics} | Events: {events} | "
+                f"Tone: {tone} | Markers: {markers}")
+        scores = getattr(s, "behavioral_scores", None)
+        if scores:
+            top = max(scores.items(), key=lambda kv: kv[1])
+            zone = getattr(s, "risk_zone", None) or "n/a"
+            line += f" | Zone: {zone} | Peak: {top[0]} {top[1]:.2f}"
+        lines.append(line)
     return "\n".join(lines)
 
 
@@ -70,8 +83,12 @@ def _build_prompt(today: date, messages: list[str], calendar_section: str,
 
     if calendar_section:
         calendar_block = f"""
-If a CALENDAR of previous notable days is provided, reference it in
-operator_note to connect patterns across days. Use dates, not "previously".
+A CALENDAR of previous notable days is provided below. Each entry may carry the
+prior day's risk Zone and its Peak behavioural score. ANCHOR today's scores to
+this trend: if the calendar shows a sustained moderate level, today's scores
+should stay near that level unless today's messages give a clear reason to move.
+Do not swing a dimension from high to near-zero (or back) between adjacent days
+without explicit evidence. Reference the calendar in operator_note using dates.
 
 {calendar_section}
 """

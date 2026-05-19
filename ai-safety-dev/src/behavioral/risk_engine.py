@@ -5,6 +5,23 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Stage-4 YELLOW behavioural thresholds. The defaults reproduce the original
+# hard-coded values exactly; evaluate_risk_zone accepts an override dict so the
+# thresholds can be recalibrated without touching production behaviour
+# (see experiments/optimize_thresholds.py).
+DEFAULT_YELLOW_TH = {
+    "topic_concentration": 0.7,
+    "decision_delegation": 0.4,
+    "emotional_attachment": 0.5,
+    "social_isolation": 0.4,
+    "emotional_isolation": 0.6,
+    "tc_depr_pair": 0.6,   # topic_concentration conjunct of the depression-pattern rule
+    "ei_depr_pair": 0.5,   # emotional_isolation conjunct of the depression-pattern rule
+    "ea_iso_pair": 0.4,    # emotional_attachment conjunct of the isolation rule
+    "delusional": 0.5,
+    "selfharm": 0.4,
+}
+
 
 async def evaluate_risk_zone(
     temporal_metrics: dict,
@@ -12,6 +29,8 @@ async def evaluate_risk_zone(
     behavioral_scores: dict,
     baselines: dict | None = None,
     recent_history: list | None = None,
+    thresholds: dict | None = None,
+    yellow_gate: int = 2,
 ) -> tuple[str, list[str]]:
     """Evaluate risk zone from all stage outputs.
 
@@ -21,6 +40,9 @@ async def evaluate_risk_zone(
         behavioral_scores: Stage 3 scores
         baselines: 7-day rolling averages for trend detection
         recent_history: last N MetricsHistory rows for sustained-YELLOW check
+        thresholds: optional override for the YELLOW behavioural thresholds;
+            keys default to DEFAULT_YELLOW_TH when omitted
+        yellow_gate: number of YELLOW triggers required to enter YELLOW
 
     Returns:
         (zone, triggered_rules) where zone is GREEN/YELLOW/RED
@@ -29,8 +51,9 @@ async def evaluate_risk_zone(
         baselines = {}
     if recent_history is None:
         recent_history = []
+    th = {**DEFAULT_YELLOW_TH, **(thresholds or {})}
 
-    yellow_triggers = _check_yellow_triggers(temporal_metrics, danger_class_agg, behavioral_scores, baselines)
+    yellow_triggers = _check_yellow_triggers(temporal_metrics, danger_class_agg, behavioral_scores, baselines, th)
     red_triggers = _check_red_triggers(temporal_metrics, danger_class_agg, behavioral_scores)
 
     # Sustained YELLOW check: YELLOW for >=3 consecutive days
@@ -74,7 +97,7 @@ async def evaluate_risk_zone(
     if red_triggers:
         all_triggers = red_triggers + yellow_triggers
         zone = "RED"
-    elif len(yellow_triggers) >= 2:
+    elif len(yellow_triggers) >= yellow_gate:
         all_triggers = yellow_triggers
         zone = "YELLOW"
     else:
@@ -87,9 +110,11 @@ async def evaluate_risk_zone(
 
 
 def _check_yellow_triggers(
-    temporal: dict, danger: dict, behavioral: dict, baselines: dict
+    temporal: dict, danger: dict, behavioral: dict, baselines: dict,
+    th: dict | None = None,
 ) -> list[str]:
     """Check all YELLOW trigger rules. Returns list of triggered rule names."""
+    th = {**DEFAULT_YELLOW_TH, **(th or {})}
     triggers = []
 
     if temporal.get("night_messages", 0) > 24:
@@ -103,17 +128,17 @@ def _check_yellow_triggers(
     if danger.get("max_class_avg", 0) > 0.3:
         triggers.append("max_class_avg > 0.3")
 
-    if behavioral.get("topic_concentration", 0) > 0.7:
-        triggers.append("topic_concentration > 0.7")
+    if behavioral.get("topic_concentration", 0) > th["topic_concentration"]:
+        triggers.append(f"topic_concentration > {th['topic_concentration']}")
 
-    if behavioral.get("decision_delegation", 0) > 0.4:
-        triggers.append("decision_delegation > 0.4")
+    if behavioral.get("decision_delegation", 0) > th["decision_delegation"]:
+        triggers.append(f"decision_delegation > {th['decision_delegation']}")
 
-    if behavioral.get("emotional_attachment", 0) > 0.5:
-        triggers.append("emotional_attachment > 0.5")
+    if behavioral.get("emotional_attachment", 0) > th["emotional_attachment"]:
+        triggers.append(f"emotional_attachment > {th['emotional_attachment']}")
 
-    if behavioral.get("social_isolation", 0) > 0.4 and behavioral.get("emotional_attachment", 0) > 0.4:
-        triggers.append("social_isolation > 0.4 AND emotional_attachment > 0.4")
+    if behavioral.get("social_isolation", 0) > th["social_isolation"] and behavioral.get("emotional_attachment", 0) > th["ea_iso_pair"]:
+        triggers.append(f"social_isolation > {th['social_isolation']} AND emotional_attachment > {th['ea_iso_pair']}")
 
     if temporal.get("daily_active_hours", 0) >= 6:
         triggers.append("daily_active_hours >= 6")
@@ -127,26 +152,26 @@ def _check_yellow_triggers(
 
     # Rumination (topic_concentration) + emotional isolation together
     if (
-        behavioral.get("topic_concentration", 0) > 0.6
-        and behavioral.get("emotional_isolation", 0) > 0.5
+        behavioral.get("topic_concentration", 0) > th["tc_depr_pair"]
+        and behavioral.get("emotional_isolation", 0) > th["ei_depr_pair"]
     ):
-        triggers.append("topic_concentration > 0.6 AND emotional_isolation > 0.5 (depression pattern)")
+        triggers.append(f"topic_concentration > {th['tc_depr_pair']} AND emotional_isolation > {th['ei_depr_pair']} (depression pattern)")
 
     # Emotional isolation alone at moderate level: loneliness as AI-substitute
-    if behavioral.get("emotional_isolation", 0) > 0.6:
-        triggers.append("emotional_isolation > 0.6")
+    if behavioral.get("emotional_isolation", 0) > th["emotional_isolation"]:
+        triggers.append(f"emotional_isolation > {th['emotional_isolation']}")
 
     # Depression class flag rate (Stage 2 classifier)
     if danger.get("depression_flag_rate", 0) > 0.3:
         triggers.append("depression_flag_rate > 0.3")
 
     # Moderate delusional score: single-day signal → YELLOW
-    if behavioral.get("delusional", 0) > 0.5:
-        triggers.append("delusional > 0.5")
+    if behavioral.get("delusional", 0) > th["delusional"]:
+        triggers.append(f"delusional > {th['delusional']}")
 
     # Moderate selfharm score without explicit method-seeking → YELLOW
-    if behavioral.get("selfharm", 0) > 0.4:
-        triggers.append("selfharm > 0.4")
+    if behavioral.get("selfharm", 0) > th["selfharm"]:
+        triggers.append(f"selfharm > {th['selfharm']}")
 
     # Suicide flag present in any session today → YELLOW immediately
     # (even a single flag warrants elevated attention — asymmetric cost of miss)

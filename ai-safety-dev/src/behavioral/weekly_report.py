@@ -102,7 +102,7 @@ def _format_behavioral_scores(metrics_rows: list) -> str:
     ea = scores.get("emotional_attachment", 0)
     dd = scores.get("decision_delegation", 0)
     ei = scores.get("emotional_isolation", 0)
-    dl = scores.get("delusion", 0)
+    dl = scores.get("delusional", 0)
     sh = scores.get("selfharm", 0)
     def _bar(v: float) -> str:
         """Mini visual bar: 10 chars wide."""
