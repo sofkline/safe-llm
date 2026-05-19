@@ -115,8 +115,91 @@ The editor stage itself is ~200 LOC (`experiments/synthetic/postgen_edit.py`) an
 
 ---
 
+## 2026-05-19 — what the chapter-4 experiments found, and what it means for the thesis
+
+The pipeline has now been run end-to-end on the synthetic corpus and on the
+external MindGuard set. The full account is in
+`docs/research/2026-05-19-chapter4-state-of-knowledge.md`; the chapter-4 draft
+(`chapter4-draft.md`) and its scaffold are written against these results. The
+short version, for your thesis refinement:
+
+### The headline result — the YELLOW zone is not held
+
+The pipeline recovers GREEN and RED reasonably (per-zone F1 ≈ 0.7–0.8) but
+collapses the middle band: YELLOW-F1 ≈ 0.22, and only ~10 of ~76 YELLOW-designed
+day-points are predicted YELLOW. A Stage-4 audit traces this to two *opposite*
+faults — the Stage-2 classifier returns maximum-confidence labels on mild days
+(YELLOW jumps up into RED), and the Stage-4 YELLOW thresholds sit above the
+moderate-distress band Stage 3 actually reports (YELLOW falls down into GREEN).
+The three-zone scheme collapses toward a GREEN/RED binary. This is the single
+finding that organises chapter 4. It is a concrete, located defect — which makes
+it a strong negative result, not a vague failure.
+
+### The calendar mechanism (C6) — an honest negative, with a precise scope
+
+This is the part that touches your chapter 2 most directly, so handle it with
+care rather than avoid it. The longitudinal calendar — your central design
+contribution — was tested cleanly: a three-arm on/off ablation, then a follow-up
+where the calendar was *hand-rewritten* to fix every formatting defect (visible
+score trajectory, ordinal tone, day-over-day deltas, trend header). Neither moved
+the result. Turning the calendar on lifts zone accuracy by ~0.01 (run-to-run
+noise) and *raises* score variance rather than suppressing it; the hand-authored
+calendar shifted Stage-3 scores but did not change a single zone.
+
+What this does and does not mean — the scope matters and protects the thesis:
+
+- It falsifies **one narrow thing**: passing longitudinal context as *text into
+  the Stage-3 LLM prompt* does not improve scoring or suppress variance.
+- It does **not** falsify longitudinal context in general. The *deterministic*
+  forms of longitudinal context in the same pipeline — Stage-4 hysteresis,
+  Stage-1's 7-day rolling baselines — do work. The sharp conclusion is a
+  *channel* result: longitudinal context applied deterministically works;
+  the same information delivered through an LLM prompt does not.
+- The **profile is still a useful artefact**. C6 only tested whether the calendar
+  raises *automated* accuracy. The day-by-day profile it builds — topics, life
+  events, emotional tone, relationship markers — is a legible longitudinal record
+  of a user. As such it is genuinely useful for **operator review** and as a
+  **source of heuristics** for future development. The negative C6 result bounds
+  one application of the mechanism; it does not retire it. Say this explicitly in
+  the chapter so the result does not read as "the mechanism is useless".
+
+For chapter 2 you do not need to remove the calendar — you proposed a mechanism,
+chapter 4 tested it rigorously, and the test produced a precise boundary plus the
+channel insight. That *is* a contribution. The one thing worth a light pass in
+chapter 2 is softening any wording that promises the calendar will improve
+classification accuracy — phrase it as a designed mechanism whose effect chapter 4
+evaluates.
+
+### What does and does not repair the YELLOW collapse
+
+The repair work is an ablation of interventions (chapter-4 §4.7). Verified:
+Stage-4 threshold optimisation, hysteresis (both deterministic), and same-day
+cross-model ensemble scoring. Falsified: DSPy prompt optimisation, a
+graded-confidence Stage-2 prompt, confidence recalibration, and model capacity
+(gpt-oss-120b is only marginally better than deepseek). The lesson: the LLM
+components are not repaired by changing the prompt or enlarging the model — the
+limitation is structural. The one positive stochastic lever is **ensemble /
+multi-sample scoring**: the per-day Stage-3 error is independent noise,
+recoverable by averaging across models or repeated samples on the *same* day —
+but *not* by smoothing across days (EWMA was null). If you keep one forward
+direction in the conclusion, this is it.
+
+### A process lesson worth a sentence in the chapter
+
+An intermediate run reported gpt-oss-120b catastrophically over-escalating. The
+cause was not the model — it was an unstated cross-component contract: the Stage-2
+aggregator used the `confidence` field as a danger severity without gating it by
+the `label` field. deepseek emits `confidence 0` for absent classes; gpt-oss-120b
+emits `label=0 / confidence=0.96` ("96 % sure absent"), which the aggregator
+misread as severe danger. This is a clean example of a latent failure that stays
+invisible until a model interprets an under-specified contract differently — worth
+one sentence in chapter 4 as an engineering observation.
+
+---
+
 ## Open questions for you
 
 1. **Do you want to adopt the 5 model-level fixes above in your thesis pipeline?** They are orthogonal to our workshop fork — you can keep the workshop branch separate and merge selectively.
-2. **Ground-truth for `target_characteristics`** — who owns filling these in? Needs clinical intuition. We'll stub with best-guess from phase + tests_what for the workshop, but for your thesis validation this is load-bearing.
-3. **Test/train split of personas** — which personas should be held out? Candidates: Dmitry, Rina, Joseph — personas whose required_phrases don't overlap lexically with the others.
+2. **Ground-truth for `target_characteristics`** — who owns filling these in? Needs clinical intuition. We'll stub with best-guess from phase + tests_what for the workshop, but for your thesis validation this is load-bearing. This is now more pressing: the YELLOW collapse is partly a Stage-3 scoring problem, and without per-dimension numeric targets it cannot be measured as anything finer than zone accuracy.
+3. **Test/train split of personas** — already implemented for chapter 4: twelve calibration personas, four held out for evaluation, stratified by trajectory class with a fixed seed. Every tuned number in §4.7 is reported with the calibration-minus-holdout gap.
+4. **Chapter 2 calendar wording** — decide whether to soften any claim that the calendar improves classification accuracy, given the C6 result. The mechanism stays; the promised effect is what chapter 4 now bounds.
