@@ -44,62 +44,84 @@ class TestAggregatePredictions:
     def test_single_prediction(self):
         predictions = [
             {
-                "self_harm": {"label": 0, "confidence": 0.1},
+                "suicide": {"label": 0, "confidence": 0.1},
                 "psychosis": {"label": 0, "confidence": 0.2},
-                "delusion": {"label": 1, "confidence": 0.7},
+                "depression": {"label": 1, "confidence": 0.7},
                 "obsession": {"label": 0, "confidence": 0.3},
                 "anthropomorphism": {"label": 0, "confidence": 0.4},
             }
         ]
         result = _aggregate_predictions(predictions)
-        assert result["self_harm_avg"] == 0.1
-        assert result["self_harm_max"] == 0.1
-        assert result["self_harm_flag_rate"] == 0.0
-        assert result["delusion_avg"] == 0.7
-        assert result["delusion_flag_rate"] == 1.0
+        # label=0 classes contribute 0 danger regardless of confidence
+        assert result["suicide_avg"] == 0.0
+        assert result["suicide_max"] == 0.0
+        assert result["suicide_flag_rate"] == 0.0
+        # label=1 class keeps its confidence as severity
+        assert result["depression_avg"] == 0.7
+        assert result["depression_flag_rate"] == 1.0
 
     def test_multiple_predictions(self):
         predictions = [
             {
-                "self_harm": {"label": 1, "confidence": 0.9},
+                "suicide": {"label": 1, "confidence": 0.9},
                 "psychosis": {"label": 0, "confidence": 0.1},
-                "delusion": {"label": 0, "confidence": 0.2},
+                "depression": {"label": 0, "confidence": 0.2},
                 "obsession": {"label": 0, "confidence": 0.1},
                 "anthropomorphism": {"label": 0, "confidence": 0.1},
             },
             {
-                "self_harm": {"label": 0, "confidence": 0.3},
+                "suicide": {"label": 0, "confidence": 0.3},
                 "psychosis": {"label": 0, "confidence": 0.3},
-                "delusion": {"label": 1, "confidence": 0.8},
+                "depression": {"label": 1, "confidence": 0.8},
                 "obsession": {"label": 0, "confidence": 0.2},
                 "anthropomorphism": {"label": 0, "confidence": 0.2},
             },
         ]
         result = _aggregate_predictions(predictions)
-        assert result["self_harm_avg"] == pytest.approx(0.6, abs=0.01)
-        assert result["self_harm_max"] == 0.9
-        assert result["self_harm_flag_rate"] == 0.5
-        assert result["delusion_flag_rate"] == 0.5
-        assert result["max_class_avg"] == pytest.approx(0.6, abs=0.01)
+        # suicide: [label1 conf0.9, label0 conf0.3] -> gated [0.9, 0.0]
+        assert result["suicide_avg"] == pytest.approx(0.45, abs=0.01)
+        assert result["suicide_max"] == 0.9
+        assert result["suicide_flag_rate"] == 0.5
+        assert result["depression_flag_rate"] == 0.5
+        # suicide avg 0.45 is the highest class avg
+        assert result["max_class_avg"] == pytest.approx(0.45, abs=0.01)
 
     def test_empty_predictions(self):
         result = _aggregate_predictions([])
-        assert result["self_harm_avg"] == 0.0
+        assert result["suicide_avg"] == 0.0
         assert result["max_class_avg"] == 0.0
 
     def test_max_class_avg(self):
         """max_class_avg should be the highest avg across all 5 classes."""
         predictions = [
             {
-                "self_harm": {"label": 0, "confidence": 0.1},
+                "suicide": {"label": 0, "confidence": 0.1},
                 "psychosis": {"label": 0, "confidence": 0.1},
-                "delusion": {"label": 0, "confidence": 0.1},
+                "depression": {"label": 1, "confidence": 0.9},
                 "obsession": {"label": 0, "confidence": 0.1},
-                "anthropomorphism": {"label": 0, "confidence": 0.9},
+                "anthropomorphism": {"label": 0, "confidence": 0.1},
             },
         ]
         result = _aggregate_predictions(predictions)
         assert result["max_class_avg"] == 0.9
+
+    def test_label0_high_confidence_is_gated(self):
+        """Regression: a model confident a class is ABSENT (label=0 with high
+        confidence) must contribute 0 danger, not its confidence value.
+
+        gpt-oss-120b emitted label=0/confidence=0.96 for every class on benign
+        input (reading "confidence" as confidence-in-its-decision). Ungated
+        aggregation turned that into suicide_max=0.96, and the Stage-4 risk
+        engine fired RED on clean GREEN days."""
+        predictions = [
+            {c: {"label": 0, "confidence": 0.96} for c in
+             ["suicide", "psychosis", "depression", "obsession", "anthropomorphism"]}
+        ]
+        result = _aggregate_predictions(predictions)
+        assert result["suicide_max"] == 0.0
+        assert result["psychosis_max"] == 0.0
+        assert result["suicide_avg"] == 0.0
+        assert result["max_class_avg"] == 0.0
 
 
 class TestComputeDangerClassAgg:
@@ -107,7 +129,7 @@ class TestComputeDangerClassAgg:
     async def test_no_predictions_returns_zeros(self):
         with patch("behavioral.danger_agg._fetch_predict_rows", return_value=[]):
             result = await compute_danger_class_agg("user1")
-        assert result["self_harm_avg"] == 0.0
+        assert result["suicide_avg"] == 0.0
         assert result["max_class_avg"] == 0.0
 
     @pytest.mark.asyncio
@@ -115,18 +137,18 @@ class TestComputeDangerClassAgg:
         rows = [
             {
                 "predict": {
-                    "self_harm": {"label": 1, "confidence": 0.8},
+                    "suicide": {"label": 1, "confidence": 0.8},
                     "psychosis": {"label": 0, "confidence": 0.1},
-                    "delusion": {"label": 0, "confidence": 0.2},
+                    "depression": {"label": 0, "confidence": 0.2},
                     "obsession": {"label": 0, "confidence": 0.3},
                     "anthropomorphism": {"label": 0, "confidence": 0.1},
                 }
             },
             {
                 "predict": {
-                    "self_harm": {"label": 0, "confidence": 0.2},
+                    "suicide": {"label": 0, "confidence": 0.2},
                     "psychosis": {"label": 0, "confidence": 0.3},
-                    "delusion": {"label": 1, "confidence": 0.6},
+                    "depression": {"label": 1, "confidence": 0.6},
                     "obsession": {"label": 0, "confidence": 0.1},
                     "anthropomorphism": {"label": 0, "confidence": 0.2},
                 }
@@ -134,9 +156,10 @@ class TestComputeDangerClassAgg:
         ]
         with patch("behavioral.danger_agg._fetch_predict_rows", return_value=rows):
             result = await compute_danger_class_agg("user1")
-        assert result["self_harm_avg"] == pytest.approx(0.5, abs=0.01)
-        assert result["self_harm_max"] == 0.8
-        assert result["self_harm_flag_rate"] == 0.5
+        # suicide: [label1 conf0.8, label0 conf0.2] -> gated [0.8, 0.0]
+        assert result["suicide_avg"] == pytest.approx(0.4, abs=0.01)
+        assert result["suicide_max"] == 0.8
+        assert result["suicide_flag_rate"] == 0.5
 
     @pytest.mark.asyncio
     async def test_skips_invalid_predict_json(self):
@@ -145,9 +168,9 @@ class TestComputeDangerClassAgg:
             {"predict": "not_a_dict"},
             {
                 "predict": {
-                    "self_harm": {"label": 0, "confidence": 0.5},
+                    "suicide": {"label": 0, "confidence": 0.5},
                     "psychosis": {"label": 0, "confidence": 0.1},
-                    "delusion": {"label": 0, "confidence": 0.1},
+                    "depression": {"label": 0, "confidence": 0.1},
                     "obsession": {"label": 0, "confidence": 0.1},
                     "anthropomorphism": {"label": 0, "confidence": 0.1},
                 }
@@ -155,4 +178,5 @@ class TestComputeDangerClassAgg:
         ]
         with patch("behavioral.danger_agg._fetch_predict_rows", return_value=rows):
             result = await compute_danger_class_agg("user1")
-        assert result["self_harm_avg"] == 0.5
+        # the only valid row has suicide label=0 -> gated to 0.0
+        assert result["suicide_avg"] == 0.0

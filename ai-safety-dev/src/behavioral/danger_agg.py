@@ -73,7 +73,14 @@ def _aggregate_predictions(predictions: list[dict]) -> dict:
             if entry and isinstance(entry, dict):
                 conf = entry.get("confidence", 0.0)
                 label = entry.get("label", 0)
-                class_confidences[cls].append(conf)
+                # Gate confidence by label: confidence is the *severity* of a
+                # danger that is present (label=1). When label=0 the class is
+                # absent and contributes 0 danger, regardless of how confident
+                # the model is in that absence. Without this gate a model that
+                # reports confidence-in-its-decision (e.g. gpt-oss-120b emitting
+                # label=0/confidence=0.96) inflates every danger metric.
+                danger = conf if label == 1 else 0.0
+                class_confidences[cls].append(danger)
                 class_flags[cls].append(label)
 
     avgs = {}
