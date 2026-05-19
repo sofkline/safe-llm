@@ -346,13 +346,13 @@ purpose is to suppress day-to-day score variance, and it does not — calendar-*
 has the **lowest** mean score-std (0.167); turning the calendar on slightly
 *raised* variance.
 
-**Follow-up — a hand-authored calendar.** One alternative remained: perhaps the
+**Follow-up — a corrected calendar.** One alternative remained: perhaps the
 calendar was simply badly formatted. The live calendar emits thematic prose with
 no score trajectory, a non-comparable free-text tone field, repeated marker
 blocks, and feeds the model its own past predicted zones as if they were ground
-truth. A corrected calendar was hand-authored for two personas — explicit score
-trajectory, an ordinal tone scale, day-over-day deltas, a trend header — and
-Stage 3 was rerun with it. Zone accuracy did not move: Viktor 0.786 → 0.786,
+truth. A corrected calendar was authored for two personas — by a large model
+(Claude Opus) to a fixed spec, with explicit score trajectory, an ordinal tone
+scale, day-over-day deltas, and a trend header — and Stage 3 was rerun with it. Zone accuracy did not move: Viktor 0.786 → 0.786,
 Nastya 0.40 → 0.40. The corrected calendar perturbs the Stage-3 scores (it is
 being read) but the perturbation is noise-shaped — bidirectional, never enough to
 cross a Stage-4 threshold. This closes the formatting alternative: what is
@@ -379,7 +379,9 @@ calendar builds — topics, life events, emotional tone, relationship markers �
 legible longitudinal record of a user, and as such it is a usable artefact for
 **operator review** and a **source of heuristics** for future development,
 independent of whether it helps the automated classifier. The negative C6 result
-bounds one application of the mechanism; it does not retire the mechanism.
+bounds one application of the mechanism; it does not retire the mechanism. §4.7.3
+makes this concrete: a strong reader given only the calendar recovers the zone
+trajectory exactly — the artefact is information-sufficient.
 
 ### 4.7.2 The other levers — summary ablation
 
@@ -457,13 +459,103 @@ is the first genuinely positive lever for the YELLOW band. Caveat: the holdout i
 four personas, so the 0.889 sits on a small n; the calibration YELLOW-F1 gain is
 the more conservative signal.
 
+### 4.7.3 The calendar is information-sufficient — a strong-reader test (C6′)
+
+The E9 follow-up fed the corrected calendar back into the *production*
+Stage-3 path and the zones did not move. That left one question unanswered, and
+it is the decisive one for the design: **is the YELLOW collapse a
+missing-information failure, or a consumer failure?** If the calendar simply does
+not carry the signal needed to place a moderate-distress day, the mechanism is
+dead. If it carries the signal but the current Stage-3 + Stage-4 path cannot use
+it, the mechanism is sound and the limitation is a swappable component.
+
+To separate the two, the same frozen corrected calendars for Viktor and Nastya
+were given to a frontier general-purpose model (Claude Sonnet 4.6) acting as an
+**operator-review proxy**: the model saw only the calendar — no dialogue, no
+Stage-1/2/3 scores beyond those printed in the calendar itself — and was asked
+for one zone per day, with the system's own est.zone column explicitly flagged as
+unreliable and to be ignored. Two facts about this setup must be stated plainly
+up front, because they bound what the test can show. First, the corrected
+calendars were themselves authored by a large model (Claude Opus), not by a
+human — they are LLM-curated artefacts built to a fixed spec from each persona's
+frozen captured Stage-3 scores and designed event markers. Second, the grader is
+also an LLM. The test is therefore LLM-to-LLM at both ends; its one
+non-LLM anchor is the grading *target* — the ground-truth zones come from the
+human-specified persona design, not from any model. The result below is read in
+that light.
+
+| Persona | Day-points | Strong-reader trajectory | Ground truth | Match |
+|---|---|---|---|---|
+| Viktor | 14 | GGG YYY RRRRRRRR | GGG YYY RRRRRRRR | **14 / 14** |
+| Nastya | 10 | GGGG YYYYYY | GGGG YYYYYY | **10 / 10** |
+
+**The result is exact: 24 / 24 day-points, every zone, including every YELLOW
+day.** This is the same artefact, the same personas, on which the production
+pipeline fails hardest. The production path collapses YELLOW in *both*
+directions: it escalated all three of Viktor's YELLOW days to RED, and dropped
+all six of Nastya's YELLOW days to GREEN. The strong reader, given nothing but
+the calendar, recovered all nine.
+
+This licenses two claims, stated deliberately strongly.
+
+**Claim one — the calendar is information-sufficient.** The YELLOW collapse is
+*not* a missing-information failure. Everything a competent reader needs to place
+the moderate-distress band is present in the longitudinal artefact; the
+collapse happens entirely inside the consumer — the Stage-4 rule engine fires a
+dozen RED rules on Viktor's day-4 score vector with no way to read "grief onset,
+not yet crisis", context that is written plainly in the calendar and that the
+strong reader used directly. The artefact is sound. The consumer is the
+limitation. We name this companion claim **C6′: a well-formed longitudinal
+calendar is sufficient for a competent reader to recover the zone trajectory** —
+and at 24 / 24 it is confirmed. C6-as-designed (the in-prompt calendar lifts the
+*current* Stage-3 model) remains falsified; C6′ is its positive, narrower
+successor. The calendar's value is real and gated on reader capability, not on
+information content.
+
+**Claim two — the fix is a model-selection decision, not an architectural
+rebuild.** The Stage-3 scorer and the operator-review reader are swappable
+components behind a stable interface. Substituting a frontier general-purpose
+model for the local / mid-tier model in the reading role is *feasible today*, at
+a known and modest per-review cost — the experiment above is itself a working
+demonstration. And the gap is closing from the other side: open-weight local
+models improve month over month, so a capability that needs a frontier model now
+is on track to run locally within the project's own horizon. The calendar is
+therefore not an architectural dead end. It is a correct artefact waiting on a
+competent enough reader — and competent enough readers are already available and
+getting cheaper.
+
+**Caveats — stated so the claims survive scrutiny.** The test covers two personas
+and 24 day-points; it is an existence proof, not a population estimate. Three
+limits bound it. *(i) The calendars are LLM-authored.* They were written by
+Claude Opus to the corrected spec — explicit score trajectory, ordinal tone,
+day-over-day deltas, trend header — so the result measures an *idealised*
+artefact, not the prose the live pipeline currently emits. The day-point scores
+inside them are real captured Stage-3 values; the curation — selecting and
+phrasing the markers, assigning the ordinal tone — is the model's. *(ii) The
+test is LLM-to-LLM.* One large model curated the artefact and another graded it;
+the only human-defined element is the ground-truth zone trajectory the grader was
+scored against. A genuinely independent confirmation needs a human grader, or at
+least an author and grader from unrelated model families — that is the obvious
+next step, not a closed result. *(iii) Transfer is conditional.* For this to
+reach production, the live calendar must be lifted to the authored format's
+quality and a strong-enough reader must sit in the scoring or review role.
+Within those limits the finding is solid: the curation step that produced these
+calendars is itself something a model can do, so the path from raw captured
+scores to a competently-read zone trajectory is LLM-automatable end to end —
+which is why the silver lining is real rather than rhetorical. What the test does
+*not* yet establish is that an LLM grader matches a *human* operator; it
+establishes that the information needed is present and machine-recoverable.
+
 **The conclusion of §4.7.** Two repair channels work and are deterministic —
 threshold optimisation and hysteresis in Stage 4. One works and is stochastic —
 same-day ensemble averaging. Every prompt-level lever, the model-capacity lever
-and cross-day smoothing return null. Together with C6 this gives the channel
-discriminator: the YELLOW band is repaired by acting on the *deterministic* and
-*sampling* structure of the pipeline, not by what is said to the LLM or how much
-model is given to it.
+and cross-day smoothing return null. And §4.7.3 adds the missing piece: the
+calendar artefact itself is information-sufficient — the YELLOW collapse is a
+consumer limitation, repairable by a stronger reader, not a flaw in the
+longitudinal record. Together with C6 this gives the channel discriminator: the
+YELLOW band is repaired by acting on the *deterministic* and *sampling* structure
+of the pipeline — and on the *capability of the consumer* — not by what is said
+to the LLM as a prompt addendum.
 
 ---
 
@@ -606,7 +698,7 @@ Stage-4 hysteresis (§4.7.2). The rest are E1–E11:
 | E6 | Generator sensitivity | §4.8 caveat | sensitivity present |
 | E7 | Prompt A/B — hand vs DSPy | §4.7.2 | falsified |
 | E8 | Stage-2 recalibration (E8a) + graded prompt (E8b) | §4.7.2 | falsified (near-null) |
-| E9 | Calendar ablation + hand-authored-calendar rerun | §4.7.1 | C6 not confirmed |
+| E9 | Calendar ablation + corrected-calendar rerun + strong-reader test | §4.7.1, §4.7.3 | C6 not confirmed; C6′ confirmed (24/24, LLM-to-LLM) |
 | E10 | Model capacity (gpt-oss-120b) | §4.7.2 | falsified (no gap) |
 | E11 | Stage-4 noise spikes — sticky / EWMA / ensemble | §4.7.2 | ensemble verified |
 
