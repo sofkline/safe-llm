@@ -195,6 +195,46 @@ misread as severe danger. This is a clean example of a latent failure that stays
 invisible until a model interprets an under-specified contract differently — worth
 one sentence in chapter 4 as an engineering observation.
 
+### A reading path — what to read, in what order
+
+Do not start by opening the repo and trying to understand everything at once.
+Follow this order; each step makes the next one readable. Steps 1–4 are documents
+and give you the whole picture without code; step 5 is the code itself, and you
+only need it once you can already say what each experiment claimed and found.
+
+1. **`docs/research/2026-05-19-chapter4-state-of-knowledge.md`** — start here.
+   It narrates every experiment, what each verified or falsified, and the
+   diagnosis they converge on. Written to be read without the code open. After
+   this you should be able to say, in one sentence each, what E1–E11 were.
+2. **`docs/chapter4-scaffold.md`** — how chapter 4 is built: the five-step
+   scientific method, the two claim families (A: C1–C5; B: C6 + repair levers),
+   and the section map. Read the "Две группы утверждений" part carefully — it is
+   the reformulation that organises everything.
+3. **`docs/chapter4-draft.md`** — the chapter text itself, with the numbers in
+   place. Read it against the scaffold: every section should sit where the
+   scaffold says, and every claim should have a verdict.
+4. **`docs/chapter4-experiment-artifacts.md`** — what code produced those numbers:
+   the harness, the per-experiment scripts, the three production-code changes,
+   the provider wiring. This is the bridge from the chapter to the repo.
+5. **The code, in dependency order** — only now, and only if you want to verify
+   or extend a result:
+   - `experiments/evaluate_corpus.py` — the replay harness; read this first, the
+     others build on it.
+   - the three production-code changes — `src/behavioral/danger_agg.py` (the
+     aggregation fix), `risk_engine.py` (`DEFAULT_YELLOW_TH` + the override),
+     `behavioral_llm.py` (`_format_calendar` + the calendar prompt block).
+   - then the per-experiment scripts for the experiments you care about:
+     `optimize_thresholds.py` and `hysteresis_experiment.py` (the verified
+     Stage-4 levers), `stage3_calendar_ablation.py` + `capture_calendars.py` +
+     `rerun_authored_calendar.py` (the calendar mechanism, C6),
+     `stage4_noise_spikes.py` (E11, including the ensemble).
+   - the result files named in the artifacts doc's quick index, if you want to
+     see the raw numbers a script produced.
+
+The rule of the path: never read a script before you can state what experiment
+it implements and what its verdict was. The documents give you that; the code is
+verification, not first contact.
+
 ---
 
 ## Open questions for you
