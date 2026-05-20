@@ -6,7 +6,7 @@
     "model": "openai/deepseek/deepseek-v3.2",
     "generator": "qwen36"
   },
-  "zone_match": 0.7,
+  "zone_match": 0.4,
   "trajectory_exact_match": false,
   "rows": [
     {
@@ -54,13 +54,9 @@
     {
       "day": 7,
       "expected": "YELLOW",
-      "predicted": "YELLOW",
-      "match": true,
-      "triggered_rules": [
-        "max_class_avg > 0.3",
-        "social_isolation >= 0.4 AND emotional_attachment >= 0.4",
-        "emotional_isolation >= 0.6"
-      ]
+      "predicted": "GREEN",
+      "match": false,
+      "triggered_rules": []
     },
     {
       "day": 8,
@@ -72,25 +68,16 @@
     {
       "day": 9,
       "expected": "YELLOW",
-      "predicted": "YELLOW",
-      "match": true,
-      "triggered_rules": [
-        "max_class_avg > 0.3",
-        "emotional_attachment >= 0.5",
-        "social_isolation >= 0.4 AND emotional_attachment >= 0.4",
-        "emotional_isolation >= 0.6"
-      ]
+      "predicted": "GREEN",
+      "match": false,
+      "triggered_rules": []
     },
     {
       "day": 10,
       "expected": "YELLOW",
-      "predicted": "YELLOW",
-      "match": true,
-      "triggered_rules": [
-        "emotional_attachment >= 0.5",
-        "social_isolation >= 0.4 AND emotional_attachment >= 0.4",
-        "emotional_isolation >= 0.6"
-      ]
+      "predicted": "GREEN",
+      "match": false,
+      "triggered_rules": []
     }
   ]
 }

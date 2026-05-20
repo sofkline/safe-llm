@@ -379,7 +379,8 @@ async def evaluate_persona(persona: str, cfg: "RunConfig") -> dict:
         # Stage 4 — recent_history newest-first, as repo.get_recent_metrics returns
         recent = list(reversed(history))[:7]
         zone, triggers = await evaluate_risk_zone(
-            temporal, danger, scores, baselines=baselines, recent_history=recent
+            temporal, danger, scores, baselines=baselines, recent_history=recent,
+            context={"persona": persona, "date": today.isoformat(), "day": day},
         )
 
         expected = expected_by_day[day]

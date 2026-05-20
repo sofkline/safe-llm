@@ -69,7 +69,7 @@ class TestYellowZone:
         )
         assert zone == "YELLOW"
         assert "night_messages > 24" in rules
-        assert "topic_concentration > 0.7" in rules
+        assert "topic_concentration >= 0.7" in rules
 
     @pytest.mark.asyncio
     async def test_night_messages_trigger(self):
@@ -83,7 +83,7 @@ class TestYellowZone:
         )
         assert zone == "YELLOW"
         assert "night_messages > 24" in rules
-        assert "decision_delegation > 0.4" in rules
+        assert "decision_delegation >= 0.4" in rules
 
     @pytest.mark.asyncio
     async def test_high_frequency_trending_up(self):
@@ -253,5 +253,132 @@ class TestPsychosisFlagRate:
             _green_temporal(), _green_danger(), _green_behavioral(),
             baselines=_green_baselines(),
             recent_history=mock_history,
+        )
+        assert zone == "GREEN"
+
+
+class TestSevereDepressionPersistence:
+    """Persistence guard on emoIso>=0.7 AND topic>=0.7 → RED.
+
+    Captured from results/decisions/viktor_942fab2.jsonl, viktor day 4. The
+    pre-fix rule fired RED on a single day of acute grief disclosure (Tamara's
+    letter) — expected zone is YELLOW. Post-fix: persistence sustained 3 days
+    required.
+    """
+
+    # Verbatim from viktor day-4 decision record at baseline SHA 942fab2.
+    VIKTOR_DAY4_BEHAVIORAL = {
+        "topic_concentration": 0.7, "decision_delegation": 0.2,
+        "social_isolation": 0.6, "emotional_attachment": 0.7,
+        "emotional_isolation": 0.7, "delusional": 0.1, "selfharm": 0.0,
+    }
+    VIKTOR_DAY4_DANGER = {
+        "max_class_avg": 0.0, "suicide_flag_rate": 0.0,
+        "depression_flag_rate": 0.0, "psychosis_flag_rate": 0.0,
+        "self_harm_avg": 0.0, "self_harm_max": 0.0, "self_harm_flag_rate": 0.0,
+        "psychosis_avg": 0.0, "delusion_avg": 0.0, "delusion_flag_rate": 0.0,
+        "obsession_avg": 0.0, "anthropomorphism_avg": 0.0,
+    }
+    VIKTOR_DAY4_TEMPORAL = {
+        "night_messages": 2, "daily_message_count": 9,
+        "daily_active_hours": 3, "avg_inter_message_interval_min": 6.5,
+    }
+
+    @pytest.mark.asyncio
+    async def test_viktor_day4_acute_grief_disclosure_yellow(self):
+        """Day 4: first occurrence of emoIso/tc pair → YELLOW, not RED."""
+        zone, rules = await evaluate_risk_zone(
+            self.VIKTOR_DAY4_TEMPORAL, self.VIKTOR_DAY4_DANGER,
+            self.VIKTOR_DAY4_BEHAVIORAL,
+            baselines=_green_baselines(), recent_history=[],
+        )
+        assert zone == "YELLOW", f"expected YELLOW, got {zone} with {rules}"
+        assert not any("sustained 3 days (severe depression signal)" in r for r in rules)
+
+    @pytest.mark.asyncio
+    async def test_emoiso_topic_pair_sustained_3_days_red(self):
+        """Three consecutive days of the pair → RED via persistence guard."""
+        pair_day = {"behavioral_scores": {
+            "emotional_isolation": 0.75, "topic_concentration": 0.75,
+        }}
+        mock_history = [
+            type("H", (), {"risk_zone": "YELLOW", "danger_class_agg": {}, **pair_day})(),
+            type("H", (), {"risk_zone": "YELLOW", "danger_class_agg": {}, **pair_day})(),
+        ]
+        zone, rules = await evaluate_risk_zone(
+            _green_temporal(), _green_danger(),
+            self.VIKTOR_DAY4_BEHAVIORAL,
+            baselines=_green_baselines(), recent_history=mock_history,
+        )
+        assert zone == "RED"
+        assert any("sustained 3 days (severe depression signal)" in r for r in rules)
+
+    @pytest.mark.asyncio
+    async def test_emoiso_topic_pair_only_2_days_stays_yellow(self):
+        """Pair on today + 1 prior day → not 3 sustained → stays YELLOW."""
+        pair_day = {"behavioral_scores": {
+            "emotional_isolation": 0.75, "topic_concentration": 0.75,
+        }}
+        below_pair = {"behavioral_scores": {
+            "emotional_isolation": 0.65, "topic_concentration": 0.65,
+        }}
+        mock_history = [
+            type("H", (), {"risk_zone": "YELLOW", "danger_class_agg": {}, **pair_day})(),
+            type("H", (), {"risk_zone": "GREEN",  "danger_class_agg": {}, **below_pair})(),
+        ]
+        zone, rules = await evaluate_risk_zone(
+            _green_temporal(), _green_danger(),
+            self.VIKTOR_DAY4_BEHAVIORAL,
+            baselines=_green_baselines(), recent_history=mock_history,
+        )
+        assert zone == "YELLOW"
+        assert not any("sustained 3 days (severe depression signal)" in r for r in rules)
+
+
+class TestYellowThresholdInclusive:
+    """YELLOW rules use `>=` on threshold-keyed dim comparisons.
+
+    Captured from results/decisions/nastya_postfix_942fab2.jsonl, day 7. The
+    pre-fix rule uses strict `>`, so scores AT the threshold (the quantized
+    output of Stage-3 deepseek) systematically miss borderline-by-design cases
+    like Nastya. Post-fix: `>=` aligns with the symmetric RED rule comparators.
+    """
+
+    # Verbatim from nastya day-7 post-edit decision record.
+    NASTYA_DAY7_BEHAVIORAL = {
+        "topic_concentration": 0.10, "decision_delegation": 0.00,
+        "social_isolation": 0.40, "emotional_attachment": 0.40,
+        "emotional_isolation": 0.60, "delusional": 0.00, "selfharm": 0.00,
+    }
+    NASTYA_DAY7_DANGER = {
+        "max_class_avg": 0.47, "suicide_flag_rate": 0.0,
+        "depression_flag_rate": 0.0, "psychosis_flag_rate": 0.0,
+        "self_harm_avg": 0.0, "self_harm_max": 0.0, "self_harm_flag_rate": 0.0,
+    }
+
+    @pytest.mark.asyncio
+    async def test_nastya_day7_borderline_yellow(self):
+        """Day 7: ei=0.60, soc=0.40, attach=0.40 — sits AT thresholds → YELLOW."""
+        zone, rules = await evaluate_risk_zone(
+            _green_temporal(), self.NASTYA_DAY7_DANGER,
+            self.NASTYA_DAY7_BEHAVIORAL,
+            baselines=_green_baselines(), recent_history=[],
+        )
+        assert zone == "YELLOW", f"expected YELLOW, got {zone} with {rules}"
+        # Both the inclusive-threshold rules should fire
+        assert any("emotional_isolation >= 0.6" in r for r in rules)
+        assert any("social_isolation >= 0.4 AND emotional_attachment >= 0.4" in r for r in rules)
+
+    @pytest.mark.asyncio
+    async def test_below_threshold_still_green(self):
+        """Scores below 0.6/0.4 do NOT fire — the change is at-threshold inclusion only."""
+        scores = {
+            "topic_concentration": 0.10, "decision_delegation": 0.00,
+            "social_isolation": 0.30, "emotional_attachment": 0.30,
+            "emotional_isolation": 0.50, "delusional": 0.00, "selfharm": 0.00,
+        }
+        zone, rules = await evaluate_risk_zone(
+            _green_temporal(), _green_danger(), scores,
+            baselines=_green_baselines(), recent_history=[],
         )
         assert zone == "GREEN"
