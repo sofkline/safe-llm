@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -26,7 +28,7 @@ class Settings(BaseSettings):
 
     SCRAPE_HOURS_WINDOW: int = 1
 
-    is_develop_mode: bool = False
+    is_develop_mode: bool = True
 
     @property
     def database_url(self):

@@ -1,6 +1,8 @@
 # Точка входа: оборачивает LiteLLM Proxy, добавляет middleware и планировщики
 import os
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+load_dotenv()
 
 import uvicorn
 from litellm.proxy.proxy_server import app

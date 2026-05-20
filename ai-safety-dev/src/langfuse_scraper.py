@@ -28,20 +28,6 @@ def _last_hour_window(now: Optional[datetime] = None) -> tuple[datetime, datetim
     start = end - timedelta(hours=settings.SCRAPE_HOURS_WINDOW)
     return start, end
 
-
-def _parse_metadata(trace) -> dict:
-    """Parse trace metadata — LiteLLM writes it as a JSON string."""
-    raw = getattr(trace, "metadata", None) or {}
-    if isinstance(raw, str):
-        try:
-            return json.loads(raw)
-        except (json.JSONDecodeError, TypeError):
-            return {}
-    if isinstance(raw, dict):
-        return raw
-    return {}
-
-
 def _extract_user_id(trace) -> Optional[str]:
     # Стандартный user_id трейса (если LiteLLM его пишет)
     if hasattr(trace, "user_id") and trace.user_id:

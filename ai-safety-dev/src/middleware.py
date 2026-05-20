@@ -13,26 +13,12 @@ from typing import Optional, Dict, Any, List
 
 from config import settings
 from classificators import input_classification
-from prompts import POLICY
 from behavioral.repository import BehavioralRepository
+from prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
 
 _CHAT_PATHS = {"/v1/chat/completions", "/chat/completions"}
-
-
-def _get_zone_prompt(risk_zone: str) -> Optional[str]:
-    if risk_zone == "YELLOW":
-        path = os.environ.get("YELLOW_ZONE_PROMPT_FILE")
-        if path and os.path.exists(path):
-            return open(path).read().strip()
-        return os.environ.get("YELLOW_ZONE_PROMPT") or _DEFAULT_YELLOW
-    if risk_zone == "RED":
-        path = os.environ.get("RED_ZONE_PROMPT_FILE")
-        if path and os.path.exists(path):
-            return open(path).read().strip()
-        return os.environ.get("RED_ZONE_PROMPT") or _DEFAULT_RED
-    return None
 
 _DEFAULT_YELLOW = (
     "This user may be developing an unhealthy interaction pattern with AI. "
@@ -50,6 +36,23 @@ _DEFAULT_RED = (
     "conversations."
 )
 
+_DEFAULT_POLICY = (
+    "You are a binary safety classifier for USER INPUT."
+    "Return exactly ONE character: 0 or 1."
+    "Do not include any explanation, words, whitespace, punctuation, or JSON."
+    "0 = The user input is SAFE (does NOT violate this policy)."
+    "1 = The user input VIOLATES this policy."
+)
+
+def _get_policy_prompt() -> str:
+    return load_prompt("BINARY_POLICY_PROMPT_FILE", default=_DEFAULT_POLICY)
+
+def _get_zone_prompt(risk_zone: str) -> Optional[str]:
+    if risk_zone == "YELLOW":
+        return load_prompt("YELLOW_ZONE_PROMPT", default=_DEFAULT_YELLOW)
+    if risk_zone == "RED":
+        return load_prompt("RED_ZONE_PROMPT", default=_DEFAULT_RED)
+    return None
 
 def _inject_risk_zone_prompt(messages: list, risk_zone: Optional[str]) -> list:
     if not risk_zone or risk_zone == "GREEN":
@@ -85,7 +88,7 @@ class BehavioralSafetyMiddleware:
         judge_model: str = settings.JUDGE_MODEL,
         judge_api_key: Optional[str] = None,
         judge_api_base: str = "https://openrouter.ai/api/v1",
-        policy_prompt: str = POLICY,
+        policy_prompt: Optional[str] = None, 
         timeout_s: float = 10.0,
         fail_open: bool = True,
     ):
@@ -93,7 +96,6 @@ class BehavioralSafetyMiddleware:
         self.judge_model = judge_model
         self.judge_api_key = judge_api_key or os.getenv("JUDGE_API_KEY")
         self.judge_api_base = judge_api_base
-        self.policy_prompt = (policy_prompt or "").strip()
         self.timeout_s = float(timeout_s)
         self.fail_open = bool(fail_open)
 
@@ -144,7 +146,7 @@ class BehavioralSafetyMiddleware:
                 timeout=self.timeout_s,
                 model=self.judge_model,
                 messages=[
-                    {"role": "system", "content": self.policy_prompt},
+                    {"role": "system", "content": _get_policy_prompt()},  # читает файл каждый раз
                     {"role": "user", "content": user_text},
                 ],
                 temperature=0,
