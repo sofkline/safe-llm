@@ -174,7 +174,14 @@ class TestRedZone:
                 "AND daily_messages > 20") in rules
 
     @pytest.mark.asyncio
-    async def test_sustained_yellow(self):
+    async def test_sustained_yellow_no_longer_escalates_to_red(self):
+        """Regression: sustained_yellow is a YELLOW reinforcement, not a RED
+        escalator. Dmitry-class sustained-YELLOW personas (progressive
+        delegation without crisis) are designed to stay YELLOW indefinitely;
+        the previous '3 YELLOW days → RED' rule contradicted the archetype
+        by construction. Genuine deterioration is caught by other RED rules
+        (suicide/psychosis/depression flag rates, severe-depression
+        sustained-3, behavioral RED thresholds)."""
         mock_history = [
             type("H", (), {"risk_zone": "YELLOW", "danger_class_agg": {}, "behavioral_scores": {}})(),
             type("H", (), {"risk_zone": "YELLOW", "danger_class_agg": {}, "behavioral_scores": {}})(),
@@ -189,8 +196,33 @@ class TestRedZone:
             baselines=_green_baselines(),
             recent_history=mock_history,
         )
-        assert zone == "RED"
-        assert "sustained_yellow >= 3 days" in rules
+        # Same triggers as before, but persistence is now YELLOW reinforcement
+        # rather than RED. With 2+ yellow triggers we are in YELLOW; the
+        # reinforcement adds confidence but does not promote to RED.
+        assert zone == "YELLOW"
+        assert any("sustained_yellow >= 3 days (reinforcement)" in r for r in rules)
+
+    @pytest.mark.asyncio
+    async def test_sustained_yellow_carries_single_trigger_to_yellow(self):
+        """The reinforcement lets persistent mild concern stay YELLOW even
+        when today narrows to one behavioral trigger — i.e. sustained YELLOW
+        is itself worth a second trigger for yellow_gate=2."""
+        mock_history = [
+            type("H", (), {"risk_zone": "YELLOW", "danger_class_agg": {}, "behavioral_scores": {}})(),
+            type("H", (), {"risk_zone": "YELLOW", "danger_class_agg": {}, "behavioral_scores": {}})(),
+            type("H", (), {"risk_zone": "YELLOW", "danger_class_agg": {}, "behavioral_scores": {}})(),
+        ]
+        # Today: only decision_delegation fires (single trigger).
+        behavioral = {**_green_behavioral(), "decision_delegation": 0.40}
+        zone, rules = await evaluate_risk_zone(
+            _green_temporal(), _green_danger(), behavioral,
+            baselines=_green_baselines(),
+            recent_history=mock_history,
+        )
+        assert zone == "YELLOW"
+        # Both triggers: today's dd + sustained-yellow reinforcement.
+        assert any("decision_delegation >= 0.4" in r for r in rules)
+        assert any("sustained_yellow >= 3 days (reinforcement)" in r for r in rules)
 
     @pytest.mark.asyncio
     async def test_red_overrides_yellow(self):
@@ -382,3 +414,63 @@ class TestYellowThresholdInclusive:
             baselines=_green_baselines(), recent_history=[],
         )
         assert zone == "GREEN"
+
+
+class TestSustainedDelegationRule:
+    """Sustained-YELLOW personas whose design has a single behavioral marker
+    (Dmitry-class: progressive AI-reliance without emotional dependency or
+    topic fixation) need a self-sufficient YELLOW path. A strong
+    decision_delegation signal (>=0.5) paired with sufficient interaction
+    volume (msgs >= 10) fires as a second YELLOW trigger so the gate of 2
+    is reachable from delegation alone."""
+
+    @pytest.mark.asyncio
+    async def test_strong_delegation_with_volume_yields_yellow(self):
+        """Dmitry day 8: dd=0.55, msgs=14, no other signals → YELLOW."""
+        scores = {**_green_behavioral(), "decision_delegation": 0.55}
+        temporal = {**_green_temporal(), "daily_message_count": 14}
+        zone, rules = await evaluate_risk_zone(
+            temporal, _green_danger(), scores,
+            baselines=_green_baselines(),
+        )
+        assert zone == "YELLOW"
+        assert any("decision_delegation >= 0.4" in r for r in rules)
+        assert any("sustained-delegation pattern" in r for r in rules)
+
+    @pytest.mark.asyncio
+    async def test_borderline_dd_stays_green(self):
+        """dd=0.40 fires only the existing dd>=0.4 trigger (single trigger) → GREEN."""
+        scores = {**_green_behavioral(), "decision_delegation": 0.40}
+        temporal = {**_green_temporal(), "daily_message_count": 14}
+        zone, rules = await evaluate_risk_zone(
+            temporal, _green_danger(), scores,
+            baselines=_green_baselines(),
+        )
+        assert zone == "GREEN"
+
+    @pytest.mark.asyncio
+    async def test_strong_delegation_but_low_volume_stays_green(self):
+        """dd=0.55 with msgs=6 (degenerate corpus day) → GREEN. Insufficient
+        volume makes the read unreliable; refuse to escalate."""
+        scores = {**_green_behavioral(), "decision_delegation": 0.55}
+        temporal = {**_green_temporal(), "daily_message_count": 6}
+        zone, rules = await evaluate_risk_zone(
+            temporal, _green_danger(), scores,
+            baselines=_green_baselines(),
+        )
+        assert zone == "GREEN"
+
+    @pytest.mark.asyncio
+    async def test_strong_delegation_with_attachment_still_yellow(self):
+        """Both triggers compatible: high dd + moderate emotional_attachment
+        should still be YELLOW (not RED). Confirms the new rule doesn't
+        interact with attachment-rich personas to over-escalate."""
+        scores = {**_green_behavioral(),
+                  "decision_delegation": 0.55,
+                  "emotional_attachment": 0.50}
+        temporal = {**_green_temporal(), "daily_message_count": 14}
+        zone, rules = await evaluate_risk_zone(
+            temporal, _green_danger(), scores,
+            baselines=_green_baselines(),
+        )
+        assert zone == "YELLOW"

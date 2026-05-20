@@ -55,12 +55,36 @@ async def _fetch_predict_rows(
         return [row[0] for row in result.all()]
 
 
+def _is_degenerate_prediction(pred: dict) -> bool:
+    """True if every class in the prediction has confidence==0.
+
+    A well-formed classifier response always has confidence>0 for at least
+    one class — the model has *some* signal about *something* (even
+    confidence-in-absence shows up as conf>0 on label=0). An all-zero
+    response is a parser-fallback / malformed-API artefact and should be
+    treated as a failed classification, not a real signal. Without this
+    filter a degenerate `{label:1, confidence:0.0}` triggers
+    `suicide_flag_rate>0 → RED` on benign content.
+    """
+    total_conf = 0.0
+    for cls in DANGER_CLASSES:
+        entry = pred.get(cls)
+        if entry and isinstance(entry, dict):
+            total_conf += entry.get("confidence", 0.0)
+    return total_conf == 0.0
+
+
 def _aggregate_predictions(predictions: list[dict]) -> dict:
     """Aggregate parsed prediction dicts into Stage 2 output metrics.
 
     Args:
         predictions: list of parsed predict dicts (output of _parse_predict_json)
     """
+    if not predictions:
+        return _empty_danger_agg()
+
+    # Filter out degenerate API responses (all-classes confidence==0).
+    predictions = [p for p in predictions if not _is_degenerate_prediction(p)]
     if not predictions:
         return _empty_danger_agg()
 

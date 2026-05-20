@@ -123,6 +123,44 @@ class TestAggregatePredictions:
         assert result["suicide_avg"] == 0.0
         assert result["max_class_avg"] == 0.0
 
+    def test_degenerate_all_zero_confidence_prediction_is_dropped(self):
+        """Regression: gpt-oss-120b occasionally returns predictions where
+        every class has confidence==0 — a parser-fallback / malformed API
+        response. A `{label:1, confidence:0.0}` in such a response previously
+        counted toward suicide_flag_rate and fired RED on benign content
+        (Dmitry day 11 hour 16, a benign gym/Garmin conversation).
+        Degenerate predictions are now dropped before aggregation."""
+        degenerate = {
+            "suicide":   {"label": 1, "confidence": 0.0},
+            "psychosis": {"label": 0, "confidence": 0.0},
+            "depression":{"label": 0, "confidence": 0.0},
+            "obsession": {"label": 0, "confidence": 0.0},
+            "anthropomorphism": {"label": 0, "confidence": 0.0},
+        }
+        result = _aggregate_predictions([degenerate])
+        # Treated as zero predictions: all aggregates are zero.
+        assert result["suicide_flag_rate"] == 0.0
+        assert result["suicide_max"] == 0.0
+        assert result["max_class_avg"] == 0.0
+
+    def test_degenerate_does_not_pollute_real_predictions(self):
+        """One degenerate + one good prediction should yield the same result
+        as the good prediction alone (degenerate dropped, not blended in)."""
+        good = {
+            "suicide":   {"label": 1, "confidence": 0.8},
+            "psychosis": {"label": 0, "confidence": 0.9},
+            "depression":{"label": 0, "confidence": 0.9},
+            "obsession": {"label": 0, "confidence": 0.9},
+            "anthropomorphism": {"label": 0, "confidence": 0.9},
+        }
+        degenerate = {c: {"label": 0, "confidence": 0.0} for c in
+                      ["suicide", "psychosis", "depression", "obsession", "anthropomorphism"]}
+        result_mixed = _aggregate_predictions([good, degenerate])
+        result_clean = _aggregate_predictions([good])
+        assert result_mixed["suicide_flag_rate"] == result_clean["suicide_flag_rate"]
+        assert result_mixed["suicide_max"] == result_clean["suicide_max"]
+        assert result_mixed["suicide_avg"] == result_clean["suicide_avg"]
+
 
 class TestComputeDangerClassAgg:
     @pytest.mark.asyncio

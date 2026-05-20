@@ -74,11 +74,20 @@ async def evaluate_risk_zone(
     yellow_triggers = _check_yellow_triggers(temporal_metrics, danger_class_agg, behavioral_scores, baselines, th)
     red_triggers = _check_red_triggers(temporal_metrics, danger_class_agg, behavioral_scores, recent_history)
 
-    # Sustained YELLOW check: YELLOW for >=3 consecutive days
+    # Sustained YELLOW reinforcement: 3+ consecutive YELLOW days → adds a
+    # YELLOW trigger today (not RED). Persistence by itself is "stable mild
+    # concern", not "escalation". Genuine deterioration is already caught
+    # by other RED rules (suicide/psychosis/depression flag rates, severe-
+    # depression-pattern sustained, behavioral RED thresholds). This rule
+    # was originally a `→ RED` escalator, which contradicts sustained-YELLOW
+    # archetypes by design — Dmitry (sustained delegation without crisis)
+    # is the regression case. As a YELLOW reinforcement it lets persistent
+    # mild concern stay reachable through the yellow_gate=2 even when
+    # today's signal narrows to one behavioral trigger.
     if len(recent_history) >= 3:
         last_3_zones = [h.risk_zone for h in recent_history[:3]]
         if all(z == "YELLOW" for z in last_3_zones):
-            red_triggers.append("sustained_yellow >= 3 days")
+            yellow_triggers.append("sustained_yellow >= 3 days (reinforcement)")
 
 # ── Sustained signal checks (longitudinal rules)
 
@@ -194,6 +203,26 @@ def _check_yellow_triggers(
 
     if behavioral.get("decision_delegation", 0) >= th["decision_delegation"]:
         triggers.append(f"decision_delegation >= {th['decision_delegation']}")
+
+    # Sustained-delegation strong-signal path. The default yellow_gate=2 requires
+    # two distinct YELLOW triggers, which is correct for most archetypes (the
+    # additional signal raises confidence). But a sustained-YELLOW archetype
+    # whose design has only one behavioral marker (progressive decision-
+    # delegation without emotional dependency, topic fixation, or isolation —
+    # the Dmitry class) is undetectable under that gate by construction. When
+    # decision_delegation is *strong* (>=0.5) and there is enough interaction
+    # volume to make the read reliable (daily_message_count >= 10), it fires as
+    # a second trigger alongside the existing dd>=0.4 — turning sustained
+    # delegation into a self-sufficient YELLOW signal. Symmetric with the
+    # high-confidence single-message RED paths (psychosis_max > 0.8,
+    # suicide_max > 0.7) which already act as self-sufficient escalators.
+    if (
+        behavioral.get("decision_delegation", 0) >= 0.5
+        and temporal.get("daily_message_count", 0) >= 10
+    ):
+        triggers.append(
+            "decision_delegation >= 0.5 AND daily_message_count >= 10 (sustained-delegation pattern)"
+        )
 
     if behavioral.get("emotional_attachment", 0) >= th["emotional_attachment"]:
         triggers.append(f"emotional_attachment >= {th['emotional_attachment']}")
