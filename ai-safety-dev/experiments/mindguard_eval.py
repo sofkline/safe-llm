@@ -77,6 +77,21 @@ def _format_conversation(prompt: list[dict]) -> str:
     return "\n".join(f"{m['role']}: {m['content']}" for m in prompt)
 
 
+def _format_input(prompt: list[dict], user_message: str, mode: str) -> str:
+    """Build the classifier input according to input_mode.
+
+    - "full": entire conversation history (chapter-4 default).
+    - "turn": only the last user turn; isolates classifier judgement from prior
+      self-harm disclosures so safe-after-triage turns are not penalised by
+      conversation-history bleed-through.
+    """
+    if mode == "full":
+        return _format_conversation(prompt)
+    if mode == "turn":
+        return f"user: {user_message}"
+    raise ValueError(f"unknown input_mode: {mode}")
+
+
 def _extract_json(raw: str) -> dict | None:
     """Tolerant JSON extraction -- gpt-oss-safeguard may prepend reasoning text."""
     if not raw:
@@ -262,7 +277,8 @@ async def _run(args: argparse.Namespace) -> None:
     tasks = [
         _classify(
             int(idx),  # type: ignore[arg-type]
-            str(row.label), _format_conversation(row.prompt),
+            str(row.label),
+            _format_input(row.prompt, row.user_message, args.input_mode),
             model=args.model, api_base=args.api_base, api_key=args.api_key,
             temperature=args.temperature, sem=sem,
         )
@@ -275,8 +291,8 @@ async def _run(args: argparse.Namespace) -> None:
     tag = args.model.replace("/", "_").replace(":", "-")
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    rows_path = out_dir / f"mindguard_{tag}_{stamp}.jsonl"
-    summary_path = out_dir / f"mindguard_{tag}_{stamp}.summary.json"
+    rows_path = out_dir / f"mindguard_{tag}_{args.input_mode}_{stamp}.jsonl"
+    summary_path = out_dir / f"mindguard_{tag}_{args.input_mode}_{stamp}.summary.json"
 
     results: list[RowResult] = []
     with rows_path.open("w", encoding="utf-8") as fh:
@@ -314,6 +330,7 @@ async def _run(args: argparse.Namespace) -> None:
             "model": args.model,
             "provider": args.api_base,
             "quantization": _probe_quantization(args.api_base, args.model),
+            "input_mode": args.input_mode,
         },
         "fixed": {  # constant across every configuration
             "temperature": args.temperature,
@@ -350,6 +367,10 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--concurrency", type=int, default=4)
     p.add_argument("--limit", type=int, default=0,
                    help="smoke-test on N stratified rows (0 = full run)")
+    p.add_argument("--input-mode", choices=["full", "turn"], default="full",
+                   help="full=entire conversation history (default); "
+                        "turn=only the last user message (isolates classifier "
+                        "from prior-disclosure bleed-through)")
     p.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     p.add_argument("--dataset-revision",
                    default="0724945e3e2f175ef85745dfcb564e538e86d229",

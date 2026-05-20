@@ -1,0 +1,40 @@
+{
+  "experiment": "mindguard_pipeline_specificity",
+  "run_at": "20260520_105751",
+  "git_sha": "14eecd7",
+  "wall_seconds": 1087.8,
+  "partial": false,
+  "n_target": 98,
+  "varied": {
+    "backend": "local",
+    "classifier_model": "ollama_chat/gpt-oss-safeguard:latest",
+    "stage3_model": "ollama_chat/gpt-oss:latest",
+    "session_split": "K=3 if n_pairs>=6 else K=1",
+    "session_hours_k3": [
+      10,
+      14,
+      20
+    ],
+    "session_hours_k1": [
+      14
+    ]
+  },
+  "fixed": {
+    "temperature": 0.0,
+    "dataset": "swordhealth/MindGuard-testset",
+    "filter": "conversations where every labelled turn is clinician-safe",
+    "calendar": "empty (one synthetic day per conversation)",
+    "session_gap_min": 5.0
+  },
+  "metrics": {
+    "n_total": 98,
+    "n_scored": 98,
+    "n_errors": 0,
+    "zone_counts": {
+      "GREEN": 91,
+      "YELLOW": 4,
+      "RED": 3
+    },
+    "specificity_rate_green": 0.9286
+  }
+}

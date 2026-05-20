@@ -1,0 +1,40 @@
+{
+  "experiment": "mindguard_pipeline_specificity",
+  "run_at": "20260520_105823",
+  "git_sha": "14eecd7",
+  "wall_seconds": 1395.0,
+  "partial": false,
+  "n_target": 98,
+  "varied": {
+    "backend": "routerai",
+    "classifier_model": "openai/openai/gpt-oss-120b",
+    "stage3_model": "openai/openai/gpt-oss-120b",
+    "session_split": "K=3 if n_pairs>=6 else K=1",
+    "session_hours_k3": [
+      10,
+      14,
+      20
+    ],
+    "session_hours_k1": [
+      14
+    ]
+  },
+  "fixed": {
+    "temperature": 0.0,
+    "dataset": "swordhealth/MindGuard-testset",
+    "filter": "conversations where every labelled turn is clinician-safe",
+    "calendar": "empty (one synthetic day per conversation)",
+    "session_gap_min": 5.0
+  },
+  "metrics": {
+    "n_total": 98,
+    "n_scored": 98,
+    "n_errors": 0,
+    "zone_counts": {
+      "GREEN": 87,
+      "YELLOW": 5,
+      "RED": 6
+    },
+    "specificity_rate_green": 0.8878
+  }
+}
